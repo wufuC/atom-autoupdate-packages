@@ -48,6 +48,7 @@ module.exports =
       description: 'Check for update every ___ hour(s).'
       type: 'integer'
       default: 6
+      minimum: 1
       order: 1
     handling:
       title: 'Update handling'
