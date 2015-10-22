@@ -40,4 +40,4 @@ module.exports =
         if apmInstallMsg.indexOf('✓')
           atom.notifications.addSuccess("Package has been updated successfully", {'detail': apmInstallMsg, dimissable: false})
         else
-          atom.notifications.addWarning("Failed to update #{pendingUpdate.name}", {'detail': apmInstallMsg, dimissable: true})
+          atom.notifications.addWarning("Update failed", {'detail': apmInstallMsg, dimissable: true})

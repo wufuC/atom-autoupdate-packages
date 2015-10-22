@@ -44,14 +44,14 @@ userChosen =
 module.exports =
   config:
     frequency:
-      title: 'Update check frequency'
-      description: 'Check for update every ___ hour(s)'
+      title: 'Update-check frequency'
+      description: 'Check for update every ___ hour(s).'
       type: 'integer'
       default: 6
       order: 1
     handling:
       title: 'Update handling'
-      description: 'Action to be taken when update(s) is/are available:'
+      description: 'Action to be taken when update(s) is/are available'
       type: 'string'
       enum: (mode.key for modeID, mode of option.preset)
       default: option.preset.mode0.key
