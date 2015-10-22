@@ -1,0 +1,14 @@
+{
+  "name": "autoupdate-packages",
+  "main": "./lib/main",
+  "version": "1.0.0",
+  "description": "Keep your packages updated automatically.",
+  "keywords": [
+    "autoupdate"
+  ],
+  "repository": "https://github.com/wufuC/atom-autoupdate-packages",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  }
+}
