@@ -1,11 +1,12 @@
-# INTERNAL USE
-updateHander = null
-notificationHandler = null
+# Debug mode
+# If true, enforce CHECK_DELAY = 0 and ignore lastUpdateTimestamp
+#   i.e. always trigger @launchUpdater when window is (re-)drawn
+debug = false
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
 # Default: 30 seconds
-CHECK_DELAY = 30*1000
+CHECK_DELAY = if debug then 0 else 30*1000
 
 
 # Presets of user-selectable options
@@ -38,6 +39,11 @@ userChosen =
   verbose: null
 
 
+# dummy variable for deferred `require`
+updateHander = null
+notificationHandler = null
+
+
 #
 # Package core
 #
@@ -52,7 +58,7 @@ module.exports =
       order: 1
     handling:
       title: 'Update handling'
-      description: 'Action to be taken when update(s) is/are available'
+      description: 'Action to be taken when update(s) is/are available.'
       type: 'string'
       enum: (mode.key for modeID, mode of option.preset)
       default: option.preset.mode0.key
@@ -66,7 +72,9 @@ module.exports =
       order: 3
     lastUpdateTimestamp:
       title: 'LASTUPDATE_TIMESTAMP'
-      description: 'For internal use. Do *NOT* modify. If a forced check for update is desired, set to zero, then create a new window or reload the current one.'
+      description: 'For internal use. Do *NOT* modify.
+                    If a forced check for update is desired, set to zero,
+                    then create a new window or reload the current one.'
       type: 'integer'
       default: 0
       minimum: 0
@@ -100,7 +108,7 @@ module.exports =
 
   activate: ->
     @setUserChoice()
-    @verboseMsg "Deferring initial check: next check in #{CHECK_DELAY/1000} seconds"
+    @verboseMsg "Deferring initial check: will launch in #{CHECK_DELAY/1000} seconds"
     initialCheck = setTimeout(@launchUpdater.bind(this), CHECK_DELAY)
     @verboseMsg 'Scheduling check'
     scheduledCheck = setInterval(@launchUpdater.bind(this), userChosen.checkInterval)
@@ -114,14 +122,14 @@ module.exports =
     @verboseMsg 'Checking timestamp'
     lastCheck = @getConfig('lastUpdateTimestamp')
     nextCheck = lastCheck + userChosen.checkInterval
-    if Date.now() > nextCheck
+    if (Date.now() > nextCheck) or debug
       @verboseMsg 'Timestamp expired -> Checking for updates'
       updateHander ?= require './update-handler'
       updateHander.getOutdated(@setPendingUpdates.bind(this))
       @verboseMsg 'Overwriting timestamp'
       atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
     else
-      @verboseMsg "Next check in #{ ( nextCheck - Date.now() ) / 1000 / 60 } mins"
+      @verboseMsg "Next check in #{(nextCheck - Date.now()) / 1000 / 60} mins"
 
 
   ## FIXME: long lines
@@ -137,11 +145,24 @@ module.exports =
             detailedMessage: 'Would you like to update the package(s)?'
             buttons:
               'Update all': -> updateHander.processPendingUpdates(pendingUpdates)
-              'Let me choose what to update': -> atom.commands.dispatch(atom.views.getView(atom.workspace), 'settings-view:check-for-package-updates')
+              'Let me choose what to update': ->
+                atom.commands.dispatch(
+                  atom.views.getView(atom.workspace),
+                  'settings-view:check-for-package-updates'
+                  )
               'Not now': -> return
-          notificationHandler.announceUpdates(pendingUpdates, (userChosen.autoUpdate or userChosen.confirmAction), userChosen.confirmAction, confirmMsg)
+          notificationHandler.announceUpdates(
+            updatables = pendingUpdates,
+            saySomething = (userChosen.autoUpdate or userChosen.confirmAction),
+            actionRequired = userChosen.confirmAction,
+            confirmMsg = confirmMsg
+            )
         else
-          notificationHandler.announceUpdates(pendingUpdates, (userChosen.autoUpdate or userChosen.confirmAction), userChosen.confirmAction)
+          notificationHandler.announceUpdates(
+            updatables = pendingUpdates,
+            saySomething = (userChosen.autoUpdate or userChosen.confirmAction),
+            actionRequired = userChosen.confirmAction
+            )
       if userChosen.autoUpdate
         @verboseMsg 'Processing pending updates'
         updateHander.processPendingUpdates(pendingUpdates)

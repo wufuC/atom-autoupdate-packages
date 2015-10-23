@@ -35,9 +35,17 @@ module.exports =
 
   processPendingUpdates: (pendingUpdates) ->
     for pendingUpdate in pendingUpdates
-      args = ['install', '--no-color', "#{pendingUpdate.name}@#{pendingUpdate.latestVersion}"]
+      args = ['install'
+              '--no-color'
+              "#{pendingUpdate.name}@#{pendingUpdate.latestVersion}"]
       @runCommand args, (apmInstallMsg) =>
         if apmInstallMsg.indexOf('✓')
-          atom.notifications.addSuccess("Package has been updated successfully", {'detail': apmInstallMsg, dimissable: false})
+          atom.notifications.addSuccess(
+            "Package has been updated successfully",
+            {'detail': apmInstallMsg, dimissable: false}
+            )
         else
-          atom.notifications.addWarning("Update failed", {'detail': apmInstallMsg, dimissable: true})
+          atom.notifications.addWarning(
+            "Update failed",
+            {'detail': apmInstallMsg, dimissable: true}
+            )

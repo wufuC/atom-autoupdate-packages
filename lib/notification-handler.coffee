@@ -2,22 +2,29 @@
 
 module.exports =
   generateMsg: (updatables, saySomething, actionRequired) ->
-    header = "New #{if updatables.length == 1 then 'version' else 'versions'} available"
+    titleText = "New #{if updatables.length == 1 then 'version' else 'versions'} available"
     if saySomething
-      details = if actionRequired then 'Would you like to update the following package(s)?\n(Dimiss to proceed)\n' else 'Now updating...\n'
+      contentText = if actionRequired then '
+        Would you like to update the following package(s)?\n
+        (Dimiss to proceed)\n
+        ' else '
+        Now updating...\n
+        '
     else
-      details = ''
+      contentText = ''
     for updatable in updatables
-      details += "  #{updatable.name} #{updatable.installedVersion} -> #{updatable.latestVersion}\n"
-    return [header, details]
+      contentText += "  #{updatable.name} #{updatable.installedVersion} -> 
+                      #{updatable.latestVersion}\n"
+    messageObj =
+      title: titleText
+      content: contentText
+    return messageObj
 
 
   announceUpdates: (updatables, saySomething, actionRequired, confirmMsg) ->
-    message = {}
-    [message.header, message.detail] = @generateMsg(updatables, saySomething, actionRequired)
-    if message.header? and message.detail?
-      heading = message.header
-      options = {'detail': message.detail, 'dismissable': actionRequired}
-      updateNotification = atom.notifications.addInfo(heading, options)
+    message = @generateMsg(updatables, saySomething, actionRequired)
+    _heading = message.title
+    _options = {'detail': message.content, 'dismissable': actionRequired}
+    updateNotification = atom.notifications.addInfo(_heading, _options)
     if actionRequired and confirmMsg?
       updateNotification.onDidDismiss( -> atom.confirm(confirmMsg) )
