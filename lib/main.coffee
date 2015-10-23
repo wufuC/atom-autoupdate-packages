@@ -4,8 +4,8 @@ notificationHandler = null
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
-# Default: 1 min
-CHECK_DELAY = 0*60*1000
+# Default: 30 seconds
+CHECK_DELAY = 30*1000
 
 
 # Presets of user-selectable options

@@ -28,4 +28,4 @@ $ Use `terminal-notifer`. Messages are sent to the Notification Center on Mac OS
 
 ---
 
-*Tested on OS X 10.11 (El Capitan). Please report back if it fails your system.*
+*Tested on OS X 10.11 (El Capitan). Please report back if it fails on your system.*
