@@ -1,7 +1,7 @@
 # Debug mode
 # If true, enforce CHECK_DELAY = 0 and ignore lastUpdateTimestamp
-#   i.e. always trigger @launchUpdater when window is (re-)drawn
-debug = false
+#   i.e. always trigger @checkTimestamp when window is (re-)drawn
+debug = true
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
@@ -40,7 +40,7 @@ userChosen =
 
 
 # dummy variable for deferred `require`
-updateHander = null
+updateHandler = null
 notificationHandler = null
 
 
@@ -88,15 +88,16 @@ module.exports =
 
 
   # Wrapper function for logging message to console
-  #  it tags output message by prepending `autoupdate-packages: `
+  # It tags the message by prepending `autoupdate-packages: `
   verboseMsg: (msg) ->
     return unless userChosen.verbose
     console.log "autoupdate-packages: #{msg}"
 
 
-  # This retrieves the relevant user settings and set the `userChosen` object
+  # Retrieves the relevant user settings and set the `userChosen` object
   #   defined above. Intended to be called during package activation.
-  # TODO: trigger this function when user setting is modified
+  #
+  # TODO: Re-trigger this function when user setting is modified
   setUserChoice: ->
     @verboseMsg "Setting options"
     userChosen.checkInterval = @getConfig('frequency') * 1000*60*60
@@ -112,78 +113,65 @@ module.exports =
                  verbose = #{userChosen.verbose}"
 
 
-  # Stuffs to be run upon package activation:
-  # The userChoice object is set by calling @setUserChoice.
-  #   `setTimeout` defers the initial check of timestamp (and updates, if
-  #   timestamp is expired. `setInterval` registers recurrent check.
+  # Upon package activation run:
   activate: ->
     @setUserChoice()
     @verboseMsg "Deferring initial check: will launch in #{CHECK_DELAY/1000} seconds"
-    initialCheck = setTimeout(@launchUpdater.bind(this), CHECK_DELAY)
+    initialCheck = setTimeout(@checkTimestamp.bind(this), CHECK_DELAY)
     @verboseMsg 'Scheduling check'
-    scheduledCheck = setInterval(@launchUpdater.bind(this), userChosen.checkInterval)
+    scheduledCheck = setInterval(@checkTimestamp.bind(this), userChosen.checkInterval)
 
 
-  # # Stuffs to be run upon package deactivation
-  # deactivate: ->
-  #   # Stop all timed check. Currently disabled as it seems like Atom clears
-  #   #   these processes automatically when the editor window is killed.    
-  #   clearTimeOut @initialCheck
-  #   clearInterval @scheduledCheck
+  # Upon package deactivation run:
+  deactivate: ->  
+    clearTimeOut @initialCheck
+    clearInterval @scheduledCheck
 
 
-  # Get and set lastUpdateTimestamp and ask `update-handler` to launch `apm`
-  #   to find updates if the timestamp is expired
-  launchUpdater: ->
+  # Specify the content of the notification bubble. Called by
+  #   `@setPendingUpdates` if `userChosen.notifyMe` is true
+  summonNotifier: (pendingUpdates) ->
+    @verboseMsg 'Posting notification'
+    notificationHandler ?= require './notification-handler'
+    notificationHandler.announceUpdates(
+      updatables = pendingUpdates,
+      saySomething = (userChosen.autoUpdate or userChosen.confirmAction),
+      actionRequired = userChosen.confirmAction,
+      confirmMsg = if userChosen.confirmAction then notificationHandler.generateConfirmMsg(pendingUpdates) else null
+      )
+
+
+  # Wrapper function that trigger the update of the specified packages
+  summonUpdater: (pendingUpdates) ->
+    @verboseMsg 'Processing pending updates'
+    updateHandler ?= require './update-handler'
+    updateHandler.processPendingUpdates(pendingUpdates)
+
+
+  # Intended to be used as a callback for `update-handler.getOutdated`.
+  #   It catches the output of `update-handler.getOutdated`, then, if needed,
+  #   redirects it to `@summonNotifier` and/or `@summonUpdater` to trigger
+  #   notifications and package-update
+  setPendingUpdates: (pendingUpdates) ->
+    if pendingUpdates? and (pendingUpdates.length > 0)
+      @verboseMsg "#{pendingUpdates.length} update(s) found"
+      @summonNotifier(pendingUpdates) if userChosen.notifyMe
+      @summonUpdater(pendingUpdates) if userChosen.autoUpdate
+    else
+      @verboseMsg "No update(s) found"
+
+
+  # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask
+  #   `update-handler` to find updates 
+  checkTimestamp: ->
     @verboseMsg 'Checking timestamp'
     lastCheck = @getConfig('lastUpdateTimestamp')
     nextCheck = lastCheck + userChosen.checkInterval
     if (Date.now() > nextCheck) or debug
       @verboseMsg 'Timestamp expired -> Checking for updates'
-      updateHander ?= require './update-handler'
-      updateHander.getOutdated(@setPendingUpdates.bind(this))
+      updateHandler ?= require './update-handler'
+      updateHandler.getOutdated(@setPendingUpdates.bind(this))
       @verboseMsg 'Overwriting timestamp'
       atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
     else
       @verboseMsg "Next check in #{(nextCheck - Date.now()) / 1000 / 60} mins"
-
-
-  # A Glue function intended to be used as a callback of `update-handler.getOutdated`.
-  #   It takes the output of `update-handler.getOutdated`, then, if required, summon
-  #   `notification-handler` to post notification and/or
-  #   `update-handler` to launch `apm` to update packages.
-  setPendingUpdates: (pendingUpdates) ->
-    if pendingUpdates? and (pendingUpdates.length > 0)
-      @verboseMsg "#{pendingUpdates.length} pending update(s) found"
-      if userChosen.notifyMe
-        @verboseMsg 'Posting notification'
-        notificationHandler ?= require './notification-handler'
-        if userChosen.confirmAction
-          confirmMsg =
-            message: 'Update(s) available'
-            detailedMessage: 'Would you like to update the package(s)?'
-            buttons:
-              'Update all': -> updateHander.processPendingUpdates(pendingUpdates)
-              'Let me choose what to update': ->
-                atom.commands.dispatch(
-                  atom.views.getView(atom.workspace),
-                  'settings-view:check-for-package-updates'
-                  )
-              'Not now': -> return
-          notificationHandler.announceUpdates(
-            updatables = pendingUpdates,
-            saySomething = (userChosen.autoUpdate or userChosen.confirmAction),
-            actionRequired = userChosen.confirmAction,
-            confirmMsg = confirmMsg
-            )
-        else
-          notificationHandler.announceUpdates(
-            updatables = pendingUpdates,
-            saySomething = (userChosen.autoUpdate or userChosen.confirmAction),
-            actionRequired = userChosen.confirmAction
-            )
-      if userChosen.autoUpdate
-        @verboseMsg 'Processing pending updates'
-        updateHander.processPendingUpdates(pendingUpdates)
-    else
-      @verboseMsg "No update(s) found"
