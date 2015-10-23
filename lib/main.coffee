@@ -100,7 +100,7 @@ module.exports =
 
   activate: ->
     @setUserChoice()
-    @verboseMsg 'Deferring initial check'
+    @verboseMsg "Deferring initial check: next check in #{CHECK_DELAY/1000} seconds"
     initialCheck = setTimeout(@launchUpdater.bind(this), CHECK_DELAY)
     @verboseMsg 'Scheduling check'
     scheduledCheck = setInterval(@launchUpdater.bind(this), userChosen.checkInterval)
