@@ -81,16 +81,22 @@ module.exports =
       order: 9
 
 
+  # Wrapper function for retrieving user settings from Atom's keypath
   getConfig: (configName) ->
     {BufferedProcess} = require 'atom'
     configValue = atom.config.get("autoupdate-packages.#{configName}")
 
 
+  # Wrapper function for logging message to console
+  #  it tags output message by prepending `autoupdate-packages: `
   verboseMsg: (msg) ->
     return unless userChosen.verbose
     console.log "autoupdate-packages: #{msg}"
 
 
+  # This retrieves the relevant user settings and set the `userChosen` object
+  #   defined above. Intended to be called during package activation.
+  # TODO: trigger this function when user setting is modified
   setUserChoice: ->
     @verboseMsg "Setting options"
     userChosen.checkInterval = @getConfig('frequency') * 1000*60*60
@@ -106,6 +112,10 @@ module.exports =
                  verbose = #{userChosen.verbose}"
 
 
+  # Stuffs to be run upon package activation:
+  # The userChoice object is set by calling @setUserChoice.
+  #   `setTimeout` defers the initial check of timestamp (and updates, if
+  #   timestamp is expired. `setInterval` registers recurrent check.
   activate: ->
     @setUserChoice()
     @verboseMsg "Deferring initial check: will launch in #{CHECK_DELAY/1000} seconds"
@@ -114,10 +124,16 @@ module.exports =
     scheduledCheck = setInterval(@launchUpdater.bind(this), userChosen.checkInterval)
 
 
+  # # Stuffs to be run upon package deactivation
   # deactivate: ->
+  #   # Stop all timed check. Currently disabled as it seems like Atom clears
+  #   #   these processes automatically when the editor window is killed.    
+  #   clearTimeOut @initialCheck
   #   clearInterval @scheduledCheck
 
 
+  # Get and set lastUpdateTimestamp and ask `update-handler` to launch `apm`
+  #   to find updates if the timestamp is expired
   launchUpdater: ->
     @verboseMsg 'Checking timestamp'
     lastCheck = @getConfig('lastUpdateTimestamp')
@@ -132,7 +148,10 @@ module.exports =
       @verboseMsg "Next check in #{(nextCheck - Date.now()) / 1000 / 60} mins"
 
 
-  ## FIXME: long lines
+  # A Glue function intended to be used as a callback of `update-handler.getOutdated`.
+  #   It takes the output of `update-handler.getOutdated`, then, if required, summon
+  #   `notification-handler` to post notification and/or
+  #   `update-handler` to launch `apm` to update packages.
   setPendingUpdates: (pendingUpdates) ->
     if pendingUpdates? and (pendingUpdates.length > 0)
       @verboseMsg "#{pendingUpdates.length} pending update(s) found"
