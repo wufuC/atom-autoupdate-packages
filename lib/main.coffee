@@ -174,4 +174,6 @@ module.exports =
       @verboseMsg 'Overwriting timestamp'
       atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
     else
-      @verboseMsg "Next check in #{(nextCheck - Date.now()) / 1000 / 60} mins"
+      timeToNextCheck = (nextCheck - Date.now()) / 1000 / 60
+      timeUnit = "minute#{if timeToNextCheck > 1 then 's' else ''}"
+      @verboseMsg "Next check in #{timeToNextCheck} #{timeUnit}"
