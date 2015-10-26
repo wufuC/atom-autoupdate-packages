@@ -117,9 +117,9 @@ module.exports =
   activate: ->
     @setUserChoice()
     @verboseMsg "Deferring initial check: will launch in #{CHECK_DELAY/1000} seconds"
-    initialCheck = setTimeout(@checkTimestamp.bind(this), CHECK_DELAY)
+    @initialCheck = setTimeout(@checkTimestamp.bind(this), CHECK_DELAY)
     @verboseMsg 'Scheduling check'
-    scheduledCheck = setInterval(@checkTimestamp.bind(this), userChosen.checkInterval)
+    @scheduledCheck = setInterval(@checkTimestamp.bind(this), userChosen.checkInterval)
 
 
   # Upon package deactivation run:
@@ -154,7 +154,7 @@ module.exports =
   #   notifications and package-update
   setPendingUpdates: (pendingUpdates) ->
     if pendingUpdates? and (pendingUpdates.length > 0)
-      @verboseMsg "#{pendingUpdates.length} update(s) found"
+      @verboseMsg "#{pendingUpdates.length} update#{if pendingUpdates.length > 1 then 's' else ''} found"
       @summonNotifier(pendingUpdates) if userChosen.notifyMe
       @summonUpdater(pendingUpdates) if userChosen.autoUpdate
     else
