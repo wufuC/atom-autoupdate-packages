@@ -24,6 +24,9 @@ option =
     mode3:
       key: 'Notify me only'
       autoUpdate: false, notifyMe: true, confirmAction: false
+  autoDimissStatusbarIcon:
+    disabled: 'Disabled (default)'
+    enabled: 'Enabled'
   verboseModes:
     disabled: 'Disabled (default)'
     enabled: 'Enabled'
@@ -36,6 +39,7 @@ userChosen =
   autoUpdate: null
   notifyMe: null
   confirmAction: null
+  autoDimissStatusbarIcon: null
   verbose: null
 
 
@@ -63,13 +67,22 @@ module.exports =
       enum: (mode.key for modeID, mode of option.preset)
       default: option.preset.mode0.key
       order: 2
+    autoDimissStatusbarIcon:
+      title: 'Auto dimiss status bar icon'
+      description: 'If enabled, automatically remove the "blue package
+                    icon" at the bottom-righthand-corner of Atom window when
+                    the update is being commenced.'
+      type: 'string'
+      enum: (description for mode, description of option.autoDimissStatusbarIcon)
+      default: option.autoDimissStatusbarIcon.disabled
+      order: 3
     verbose:
       title: 'Verbose log'
       description: 'If enabled, log action to console.'
       type: 'string'
       enum: (description for mode, description of option.verboseModes)
       default: option.verboseModes.disabled
-      order: 3
+      order: 4
     lastUpdateTimestamp:
       title: 'LASTUPDATE_TIMESTAMP'
       description: 'For internal use. Do *NOT* modify.
@@ -100,16 +113,22 @@ module.exports =
   # TODO: Re-trigger this function when user setting is modified
   setUserChoice: ->
     @verboseMsg "Setting options"
+    #
     userChosen.checkInterval = @getConfig('frequency') * 1000*60*60
+    #
     selectedMode = mode for modeID, mode of option.preset when mode.key is @getConfig('handling')
     userChosen.autoUpdate = selectedMode.autoUpdate
     userChosen.notifyMe = selectedMode.notifyMe
     userChosen.confirmAction = selectedMode.confirmAction
+    #
+    userChosen.autoDimissStatusbarIcon = @getConfig('autoDimissStatusbarIcon') is option.autoDimissStatusbarIcon.enabled
+    #
     userChosen.verbose = @getConfig('verbose') is option.verboseModes.enabled
     @verboseMsg "Running mode ->
                  autoUpdate = #{userChosen.autoUpdate},
                  notifyMe = #{userChosen.notifyMe},
                  confirmAction = #{userChosen.confirmAction},
+                 autoDimissStatusbarIcon = #{userChosen.autoDimissStatusbarIcon},
                  verbose = #{userChosen.verbose}"
 
 
@@ -146,6 +165,9 @@ module.exports =
     @verboseMsg 'Processing pending updates'
     updateHandler ?= require './update-handler'
     updateHandler.processPendingUpdates(pendingUpdates)
+    if userChosen.autoDimissStatusbarIcon
+      notificationHandler ?= require './notification-handler'
+      notificationHandler.removeStatusbarUpdateIcon()
 
 
   # Intended to be used as a callback for `update-handler.getOutdated`.
