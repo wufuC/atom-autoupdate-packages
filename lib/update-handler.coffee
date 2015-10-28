@@ -17,7 +17,8 @@ module.exports =
       availableUpdates = JSON.parse(apmOutputJSON)
     catch error
       availableUpdates = null
-      console.log "Error parsing APM output.\n#{error}"
+      console.log "autoupdate-packages: Error parsing APM output.\n
+                   #{apmOutputJSON}"
       return
     for availableUpdate in availableUpdates
       'name': availableUpdate.name
@@ -42,10 +43,11 @@ module.exports =
         if apmInstallMsg.indexOf('✓')
           atom.notifications.addSuccess(
             "Package has been updated successfully",
-            {'detail': apmInstallMsg, dimissable: false}
+            {'detail': "APM output:\n  #{apmInstallMsg}", dimissable: false}
             )
         else
           atom.notifications.addWarning(
             "Update failed",
-            {'detail': apmInstallMsg, dimissable: true}
+            {'detail': "APM output:\n  #{apmInstallMsg}", dimissable: true}
             )
+        console.log("autoupdate-packages: APM output: #{apmInstallMsg}")

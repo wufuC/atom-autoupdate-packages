@@ -69,7 +69,7 @@ module.exports =
 
 
   suppressStatusbarUpdateIcon: ->
-    TIMEOUT = 1 * 60 * 1000
+    TIMEOUT = 2 * 60 * 1000
     invokeTime = Date.now()
     monitorID = setInterval (->
       removed = @removeStatusbarUpdateIcon()

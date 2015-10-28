@@ -1,7 +1,7 @@
 # Debug mode
 # If true, enforce CHECK_DELAY = 0, ignore lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
-debug = true
+debug = false
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
@@ -25,8 +25,8 @@ option =
       key: 'Notify me only'
       autoUpdate: false, notifyMe: true, confirmAction: false
   autoDimissStatusbarIcon:
-    disabled: 'Disabled (default)'
-    enabled: 'Enabled'
+    disabled: 'Disabled'
+    enabled: 'Enabled (default)'
   verboseModes:
     disabled: 'Disabled (default)'
     enabled: 'Enabled'
@@ -74,7 +74,7 @@ module.exports =
                     the update is being commenced.'
       type: 'string'
       enum: (description for mode, description of option.autoDimissStatusbarIcon)
-      default: option.autoDimissStatusbarIcon.disabled
+      default: option.autoDimissStatusbarIcon.enabled
       order: 3
     verbose:
       title: 'Verbose log'
@@ -156,8 +156,8 @@ module.exports =
       updatables = pendingUpdates,
       saySomething = (userChosen.autoUpdate or userChosen.confirmAction),
       actionRequired = userChosen.confirmAction,
-      confirmMsg = if userChosen.confirmAction then notificationHandler.generateConfirmMsg(pendingUpdates) else null
-      )
+      confirmMsg = if userChosen.confirmAction then notificationHandler.
+        generateConfirmMsg(pendingUpdates) else null)
 
 
   # Wrapper function that trigger the update of the specified packages
