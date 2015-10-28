@@ -1,4 +1,8 @@
 ## 1.2.1
+* Fix: `Suppress status bar icon` now defaults to be 'Disabled' as this function
+         does not utilize Atom's API and may conflicts with other packages or be
+         completely broken in future Atom versions
+* Fix: `Suppress status bar icon` should now handle multiple bottom panels properly
 * Fix: CHANGELOG link in README
 
 ## 1.2.0

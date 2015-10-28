@@ -15,7 +15,7 @@ module.exports =
     else
       contentText = ''
     for updatable in listOfUpdates
-      contentText += "  #{updatable.name} #{updatable.installedVersion} -> 
+      contentText += "  #{updatable.name} #{updatable.installedVersion} ->
                       #{updatable.latestVersion}\n"
     messageObj =
       title: titleText
@@ -27,7 +27,7 @@ module.exports =
   #   `main/summonNotifier`
   generateConfirmMsg: (listOfUpdates) ->
     multipleUpdates = listOfUpdates.length > 1
-    confimMsgObj = 
+    confimMsgObj =
       message: "Update the package#{if multipleUpdates then 's' else ''} now?"
       buttons:
         'Yes': ->
@@ -62,17 +62,20 @@ module.exports =
   #   output, then generates this object if update(s) is/are found.
   removeStatusbarUpdateIcon: ->
     for bottomPanel in window.atom.workspace.panelContainers.bottom.panels
-      for tile in bottomPanel.item.rightTiles
-        if tile.item.constructor.name is 'PackageUpdatesStatusView'
-          tile.destroy() 
-          return true
+      if bottomPanel.item.constructor.name is 'status-bar'
+        for tile in bottomPanel.item.rightTiles
+          if tile.item.constructor.name is 'PackageUpdatesStatusView'
+            console.log 'autoupdate-packages: killed "PackageUpdatesStatusView"'
+            tile.destroy()
+            return true
 
 
   suppressStatusbarUpdateIcon: ->
     TIMEOUT = 2 * 60 * 1000
     invokeTime = Date.now()
     monitorID = setInterval (->
+      console.log 'autoupdate-packages: looking for "PackageUpdatesStatusView"'
       removed = @removeStatusbarUpdateIcon()
       if removed or (Date.now() - invokeTime > TIMEOUT)
         clearInterval(monitorID)
-      ).bind(this), 100
+      ).bind(this), 500

@@ -25,8 +25,8 @@ option =
       key: 'Notify me only'
       autoUpdate: false, notifyMe: true, confirmAction: false
   suppressStatusbarUpdateIcon:
-    disabled: 'Disabled'
-    enabled: 'Enabled (default)'
+    disabled: 'Disabled (default)'
+    enabled: 'Enabled'
   verboseModes:
     disabled: 'Disabled (default)'
     enabled: 'Enabled'
@@ -34,7 +34,7 @@ option =
 
 # User selected options
 # Set by calling @setUserChoice upon package activation
-userChosen = 
+userChosen =
   checkInterval: null
   autoUpdate: null
   notifyMe: null
@@ -70,10 +70,13 @@ module.exports =
     suppressStatusbarUpdateIcon:
       title: 'Suppress status bar icon'
       description: 'If enabled, automatically dismiss the blue "X update(s)"
-                    icon/button at the lower right corner of your Atom window.'
+                    icon/button at the lower right corner of your Atom window.
+                    WARNING: May conflict with other packages or be broken by
+                    Atom upgrades. Please set to "Disabled" and file an issue
+                    if this throws any error.'
       type: 'string'
       enum: (description for mode, description of option.suppressStatusbarUpdateIcon)
-      default: option.suppressStatusbarUpdateIcon.enabled
+      default: option.suppressStatusbarUpdateIcon.disabled
       order: 3
     verbose:
       title: 'Verbose log'
@@ -148,7 +151,7 @@ module.exports =
 
 
   # Upon package deactivation run:
-  deactivate: ->  
+  deactivate: ->
     clearTimeOut @initialCheck
     clearInterval @scheduledCheck
 
@@ -187,7 +190,7 @@ module.exports =
 
 
   # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask
-  #   `update-handler` to find updates 
+  #   `update-handler` to find updates
   checkTimestamp: ->
     @verboseMsg 'Checking timestamp'
     lastCheck = @getConfig('lastUpdateTimestamp')
