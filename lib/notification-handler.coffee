@@ -1,5 +1,6 @@
 {BufferedProcess} = require 'atom'
 
+
 module.exports =
   generateNotificationMsg: (listOfUpdates, saySomething, actionRequired) ->
     multipleUpdates = listOfUpdates.length > 1
@@ -62,4 +63,16 @@ module.exports =
   removeStatusbarUpdateIcon: ->
     for bottomPanel in window.atom.workspace.panelContainers.bottom.panels
       for tile in bottomPanel.item.rightTiles
-        tile.destroy() if tile.item.constructor.name is 'PackageUpdatesStatusView'
+        if tile.item.constructor.name is 'PackageUpdatesStatusView'
+          tile.destroy() 
+          return true
+
+
+  suppressStatusbarUpdateIcon: ->
+    TIMEOUT = 1 * 60 * 1000
+    invokeTime = Date.now()
+    monitorID = setInterval (->
+      removed = @removeStatusbarUpdateIcon()
+      if removed or (Date.now() - invokeTime > TIMEOUT)
+        clearInterval(monitorID)
+      ).bind(this), 1000

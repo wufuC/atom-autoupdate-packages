@@ -1,6 +1,6 @@
 # Debug mode
-# If true, enforce CHECK_DELAY = 0 and ignore lastUpdateTimestamp
-#   i.e. always trigger @checkTimestamp when window is (re-)drawn
+# If true, enforce CHECK_DELAY = 0, ignore lastUpdateTimestamp and
+#   trigger @checkTimestamp when window is (re-)drawn
 debug = true
 
 
@@ -167,7 +167,7 @@ module.exports =
     updateHandler.processPendingUpdates(pendingUpdates)
     if userChosen.autoDimissStatusbarIcon
       notificationHandler ?= require './notification-handler'
-      notificationHandler.removeStatusbarUpdateIcon()
+      notificationHandler.suppressStatusbarUpdateIcon()
 
 
   # Intended to be used as a callback for `update-handler.getOutdated`.
