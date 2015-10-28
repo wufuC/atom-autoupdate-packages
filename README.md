@@ -1,6 +1,10 @@
 autoupdate-packages
 ===
 
+[Changelog here](CHANGELOG.md)
+
+---
+
 A rewrite of [yujinakayama](https://github.com/yujinakayama/)'s excellent [auto-update-packages](https://github.com/yujinakayama/atom-auto-update-packages)
 
 ---
