@@ -54,7 +54,7 @@ notificationHandler = null
 module.exports =
   config:
     frequency:
-      title: 'Update-check frequency'
+      title: 'Check frequency'
       description: 'Check for update every ___ hour(s).'
       type: 'integer'
       default: 6
@@ -69,9 +69,8 @@ module.exports =
       order: 2
     autoDimissStatusbarIcon:
       title: 'Auto dimiss status bar icon'
-      description: 'If enabled, automatically remove the "blue package
-                    icon" at the bottom-righthand-corner of Atom window when
-                    the update is being commenced.'
+      description: 'If enabled, automatically dismiss the blue "X update(s)"
+                    icon/button at the lower right corner of your Atom window.'
       type: 'string'
       enum: (description for mode, description of option.autoDimissStatusbarIcon)
       default: option.autoDimissStatusbarIcon.enabled
@@ -86,8 +85,8 @@ module.exports =
     lastUpdateTimestamp:
       title: 'LASTUPDATE_TIMESTAMP'
       description: 'For internal use. Do *NOT* modify.
-                    If a forced check for update is desired, set to zero,
-                    then create a new window or reload the current one.'
+                    If a forced check for update is desired, create a new
+                      window or reload the current one.'
       type: 'integer'
       default: 0
       minimum: 0

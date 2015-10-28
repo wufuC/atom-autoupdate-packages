@@ -1,8 +1,8 @@
 ## 1.2.0
-* New: Option to dismiss the blue 'package(s) available' icon at the lower right
-         corner of Atom window automatically when the update process is triggered
-* New: Notifications and dialogues are now aware of single/multiple update(s).
-         Pluralize if necessary
+* New: Dismiss the blue 'X updates(s)' icon/button at the lower right
+         corner of Atom window automatically (can be turned off)
+* New: Notifications and dialogues are now aware of single/multiple update(s)
+         and pluralize if necessary
 * Fix: Trigger check-for-update 30 seconds after package activation,
          giving way to Atom to draw the editor window and launch other
          UI-related packages

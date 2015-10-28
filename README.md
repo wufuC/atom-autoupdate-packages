@@ -1,7 +1,7 @@
 autoupdate-packages
 ===
 
-[Changelog here](CHANGELOG.md)
+[Changelog is available here](https://github.com/wufuC/atom-autoupdate-packages/blob/2a6c7cd8a7827be73123a7a7472de7be1a324712/CHANGELOG.md)
 
 ---
 
@@ -24,7 +24,7 @@ This started off as a series of hacks that attempt to provide the desired featur
 | Can mute notification                 | ✓            |                           |
 | Minimum interval between update-check | 1 hour^      | 15 mins                   |
 
-\# Uses Atom's notification system, should be platform-independent. Require the bundled `notification` package.
+\# Use Atom's notification system, should be platform-independent. Require the bundled `notifications` package.
 
 $ Use `terminal-notifer`. Messages are sent to the Notification Center on Mac OS X 10.8 or higher.
 
