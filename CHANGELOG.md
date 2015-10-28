@@ -1,3 +1,6 @@
+## 1.2.1
+* Fix: CHANGELOG link in README
+
 ## 1.2.0
 * New: Find and kill the blue 'X updates(s)' icon/button at the lower right
          corner of Atom window (enabled by default; can be turned off).

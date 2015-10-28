@@ -1,7 +1,7 @@
 autoupdate-packages
 ===
 
-[Changelog is available here](https://github.com/wufuC/atom-autoupdate-packages/blob/2a6c7cd8a7827be73123a7a7472de7be1a324712/CHANGELOG.md)
+[Changelog is available here](https://github.com/wufuC/atom-autoupdate-packages/blob/master/CHANGELOG.md)
 
 ---
 
