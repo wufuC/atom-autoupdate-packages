@@ -75,4 +75,4 @@ module.exports =
       removed = @removeStatusbarUpdateIcon()
       if removed or (Date.now() - invokeTime > TIMEOUT)
         clearInterval(monitorID)
-      ).bind(this), 1000
+      ).bind(this), 100

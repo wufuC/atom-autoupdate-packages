@@ -1,5 +1,5 @@
 # Debug mode
-# If true, enforce CHECK_DELAY = 0, ignore lastUpdateTimestamp and
+# If true, enforce CHECK_DELAY = 0, reset lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
 debug = false
 
@@ -24,7 +24,7 @@ option =
     mode3:
       key: 'Notify me only'
       autoUpdate: false, notifyMe: true, confirmAction: false
-  autoDimissStatusbarIcon:
+  suppressStatusbarUpdateIcon:
     disabled: 'Disabled'
     enabled: 'Enabled (default)'
   verboseModes:
@@ -39,7 +39,7 @@ userChosen =
   autoUpdate: null
   notifyMe: null
   confirmAction: null
-  autoDimissStatusbarIcon: null
+  suppressStatusbarUpdateIcon: null
   verbose: null
 
 
@@ -67,13 +67,13 @@ module.exports =
       enum: (mode.key for modeID, mode of option.preset)
       default: option.preset.mode0.key
       order: 2
-    autoDimissStatusbarIcon:
-      title: 'Auto dimiss status bar icon'
+    suppressStatusbarUpdateIcon:
+      title: 'Suppress status bar icon'
       description: 'If enabled, automatically dismiss the blue "X update(s)"
                     icon/button at the lower right corner of your Atom window.'
       type: 'string'
-      enum: (description for mode, description of option.autoDimissStatusbarIcon)
-      default: option.autoDimissStatusbarIcon.enabled
+      enum: (description for mode, description of option.suppressStatusbarUpdateIcon)
+      default: option.suppressStatusbarUpdateIcon.enabled
       order: 3
     verbose:
       title: 'Verbose log'
@@ -85,8 +85,8 @@ module.exports =
     lastUpdateTimestamp:
       title: 'LASTUPDATE_TIMESTAMP'
       description: 'For internal use. Do *NOT* modify.
-                    If a forced check for update is desired, create a new
-                      window or reload the current one.'
+                    If a forced check for update is desired, set to zero, then
+                    create a new window or reload the current one.'
       type: 'integer'
       default: 0
       minimum: 0
@@ -120,24 +120,31 @@ module.exports =
     userChosen.notifyMe = selectedMode.notifyMe
     userChosen.confirmAction = selectedMode.confirmAction
     #
-    userChosen.autoDimissStatusbarIcon = @getConfig('autoDimissStatusbarIcon') is option.autoDimissStatusbarIcon.enabled
+    userChosen.suppressStatusbarUpdateIcon = @getConfig('suppressStatusbarUpdateIcon') is option.suppressStatusbarUpdateIcon.enabled
     #
     userChosen.verbose = @getConfig('verbose') is option.verboseModes.enabled
     @verboseMsg "Running mode ->
                  autoUpdate = #{userChosen.autoUpdate},
                  notifyMe = #{userChosen.notifyMe},
                  confirmAction = #{userChosen.confirmAction},
-                 autoDimissStatusbarIcon = #{userChosen.autoDimissStatusbarIcon},
+                 suppressStatusbarUpdateIcon = #{userChosen.suppressStatusbarUpdateIcon},
                  verbose = #{userChosen.verbose}"
 
 
   # Upon package activation run:
   activate: ->
+    #
     @setUserChoice()
+    #
     @verboseMsg "Deferring initial check: will launch in #{CHECK_DELAY/1000} seconds"
     @initialCheck = setTimeout(@checkTimestamp.bind(this), CHECK_DELAY)
+    #
     @verboseMsg 'Scheduling check'
     @scheduledCheck = setInterval(@checkTimestamp.bind(this), userChosen.checkInterval)
+    #
+    if userChosen.suppressStatusbarUpdateIcon
+      notificationHandler ?= require './notification-handler'
+      notificationHandler.suppressStatusbarUpdateIcon()
 
 
   # Upon package deactivation run:
@@ -164,9 +171,6 @@ module.exports =
     @verboseMsg 'Processing pending updates'
     updateHandler ?= require './update-handler'
     updateHandler.processPendingUpdates(pendingUpdates)
-    if userChosen.autoDimissStatusbarIcon
-      notificationHandler ?= require './notification-handler'
-      notificationHandler.suppressStatusbarUpdateIcon()
 
 
   # Intended to be used as a callback for `update-handler.getOutdated`.

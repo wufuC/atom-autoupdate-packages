@@ -1,6 +1,7 @@
 ## 1.2.0
-* New: Dismiss the blue 'X updates(s)' icon/button at the lower right
-         corner of Atom window automatically (can be turned off)
+* New: Find and kill the blue 'X updates(s)' icon/button at the lower right
+         corner of Atom window (enabled by default; can be turned off).
+         Because updates are managed by this package;)
 * New: Notifications and dialogues are now aware of single/multiple update(s)
          and pluralize if necessary
 * Fix: Trigger check-for-update 30 seconds after package activation,
