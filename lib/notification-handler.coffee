@@ -54,14 +54,10 @@ module.exports =
 
   # HACK
   # Remove the blue package icon at the bottom-righthand corner of the window
-  #   It would be better to retrieve the `PackageUpdatesStatusView` (a `Tile` object)
-  #   from the status-bar service and `dispose()` it cleanly.
-  #   But I have yet to identify how to do so. Note: This object is not
-  #   immediately available when consumestatusBar() is being executed.
-  #   The activating `setting-view` module launch APM and waits for its
-  #   output, then generates this object if update(s) is/are found.
+  # TODO: find a way to retrieve the `PackageUpdatesStatusView` object directly
+  #  through `status-bar` service
   removeStatusbarUpdateIcon: ->
-    for bottomPanel in window.atom.workspace.panelContainers.bottom.panels
+    for bottomPanel in atom.workspace.getBottomPanels()
       if bottomPanel.item.constructor.name is 'status-bar'
         for tile in bottomPanel.item.rightTiles
           if tile.item.constructor.name is 'PackageUpdatesStatusView'
@@ -70,6 +66,10 @@ module.exports =
             return true
 
 
+  # HACK
+  # Search for `PackageUpdatesStatusView` element. Kill itself once the
+  #  `PackageUpdatesStatusView` is found or after the ammount of time specified
+  #  as `TIMEOUT`
   suppressStatusbarUpdateIcon: ->
     TIMEOUT = 2 * 60 * 1000
     invokeTime = Date.now()
