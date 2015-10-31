@@ -1,7 +1,7 @@
 # Debug mode
 # If true, enforce CHECK_DELAY = 0, reset lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
-debug = false
+debug = true
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
@@ -75,7 +75,9 @@ module.exports =
                     Atom upgrades. Please set to "Disabled" and file an issue
                     if this throws any error.'
       type: 'string'
-      enum: (description for mode, description of option.suppressStatusbarUpdateIcon)
+      enum:
+        for mode, description of option.suppressStatusbarUpdateIcon
+          description
       default: option.suppressStatusbarUpdateIcon.disabled
       order: 3
     verbose:
@@ -118,19 +120,22 @@ module.exports =
     #
     userChosen.checkInterval = @getConfig('frequency') * 1000*60*60
     #
-    selectedMode = mode for modeID, mode of option.preset when mode.key is @getConfig('handling')
-    userChosen.autoUpdate = selectedMode.autoUpdate
-    userChosen.notifyMe = selectedMode.notifyMe
-    userChosen.confirmAction = selectedMode.confirmAction
+    for _mode, mode of option.preset when mode.key is @getConfig('handling')
+      userChosen.autoUpdate = mode.autoUpdate
+      userChosen.notifyMe = mode.notifyMe
+      userChosen.confirmAction = mode.confirmAction
     #
-    userChosen.suppressStatusbarUpdateIcon = @getConfig('suppressStatusbarUpdateIcon') is option.suppressStatusbarUpdateIcon.enabled
+    userChosen.suppressStatusbarUpdateIcon =
+      (@getConfig('suppressStatusbarUpdateIcon') is
+        option.suppressStatusbarUpdateIcon.enabled)
     #
     userChosen.verbose = @getConfig('verbose') is option.verboseModes.enabled
     @verboseMsg "Running mode ->
                  autoUpdate = #{userChosen.autoUpdate},
                  notifyMe = #{userChosen.notifyMe},
                  confirmAction = #{userChosen.confirmAction},
-                 suppressStatusbarUpdateIcon = #{userChosen.suppressStatusbarUpdateIcon},
+                 suppressStatusbarUpdateIcon =
+                   #{userChosen.suppressStatusbarUpdateIcon},
                  verbose = #{userChosen.verbose}"
 
 
@@ -139,11 +144,13 @@ module.exports =
     #
     @setUserChoice()
     #
-    @verboseMsg "Deferring initial check: will launch in #{CHECK_DELAY/1000} seconds"
+    @verboseMsg "Deferring initial check: will launch in
+                  #{CHECK_DELAY/1000} seconds"
     @initialCheck = setTimeout(@checkTimestamp.bind(this), CHECK_DELAY)
     #
     @verboseMsg 'Scheduling check'
-    @scheduledCheck = setInterval(@checkTimestamp.bind(this), userChosen.checkInterval)
+    @scheduledCheck = setInterval(@checkTimestamp.bind(this),
+                        userChosen.checkInterval)
     #
     if userChosen.suppressStatusbarUpdateIcon
       notificationHandler ?= require './notification-handler'
@@ -182,7 +189,9 @@ module.exports =
   #   notifications and package-update
   setPendingUpdates: (pendingUpdates) ->
     if pendingUpdates? and (pendingUpdates.length > 0)
-      @verboseMsg "#{pendingUpdates.length} update#{if pendingUpdates.length > 1 then 's' else ''} found"
+      @verboseMsg "#{pendingUpdates.length}
+                    update#{if pendingUpdates.length > 1 then 's' else ''}
+                    found"
       @summonNotifier(pendingUpdates) if userChosen.notifyMe
       @summonUpdater(pendingUpdates) if userChosen.autoUpdate
     else
