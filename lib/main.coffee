@@ -1,7 +1,7 @@
 # Debug mode
 # If true, enforce CHECK_DELAY = 0, reset lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
-debug = true
+debug = false
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
@@ -32,18 +32,8 @@ option =
     enabled: 'Enabled'
 
 
-# User selected options
-# Set by calling @setUserChoice upon package activation
-userChosen =
-  checkInterval: null
-  autoUpdate: null
-  notifyMe: null
-  confirmAction: null
-  suppressStatusbarUpdateIcon: null
-  verbose: null
-
-
-# dummy variable for deferred `require`
+# for deferred assignment
+mainScope = null
 updateHandler = null
 notificationHandler = null
 
@@ -98,6 +88,17 @@ module.exports =
       order: 9
 
 
+  # Cached user-selected options
+  # Set by calling @cacheUserPreferences
+  userChosen:
+    checkInterval: null
+    autoUpdate: null
+    notifyMe: null
+    confirmAction: null
+    suppressStatusbarUpdateIcon: null
+    verbose: true
+
+
   # Wrapper function for retrieving user settings from Atom's keypath
   getConfig: (configName) ->
     {BufferedProcess} = require 'atom'
@@ -106,77 +107,71 @@ module.exports =
 
   # Wrapper function for logging message to console
   # It tags the message by prepending `autoupdate-packages: `
-  verboseMsg: (msg) ->
-    return unless userChosen.verbose
+  verboseMsg: (msg, forced = false) ->
+    return unless @userChosen.verbose or forced
     console.log "autoupdate-packages: #{msg}"
 
 
-  # Retrieves the relevant user settings and set the `userChosen` object
-  #   defined above. Intended to be called during package activation.
-  #
-  # TODO: Re-trigger this function when user setting is modified
-  setUserChoice: ->
-    @verboseMsg "Setting options"
+  # Retrieves user settings and set the `userChosen` object defined above
+  cacheUserPreferences: ->
     #
-    userChosen.checkInterval = @getConfig('frequency') * 1000*60*60
+    @userChosen.checkInterval = @getConfig('frequency') * 1000*60*60
     #
     for _mode, mode of option.preset when mode.key is @getConfig('handling')
-      userChosen.autoUpdate = mode.autoUpdate
-      userChosen.notifyMe = mode.notifyMe
-      userChosen.confirmAction = mode.confirmAction
+      @userChosen.autoUpdate = mode.autoUpdate
+      @userChosen.notifyMe = mode.notifyMe
+      @userChosen.confirmAction = mode.confirmAction
     #
-    userChosen.suppressStatusbarUpdateIcon =
+    @userChosen.suppressStatusbarUpdateIcon =
       (@getConfig('suppressStatusbarUpdateIcon') is
         option.suppressStatusbarUpdateIcon.enabled)
     #
-    userChosen.verbose = @getConfig('verbose') is option.verboseModes.enabled
+    @userChosen.verbose =
+      (@getConfig('verbose') is option.verboseModes.enabled) or debug
+    #
     @verboseMsg "Running mode ->
-                 autoUpdate = #{userChosen.autoUpdate},
-                 notifyMe = #{userChosen.notifyMe},
-                 confirmAction = #{userChosen.confirmAction},
+                 autoUpdate = #{@userChosen.autoUpdate},
+                 notifyMe = #{@userChosen.notifyMe},
+                 confirmAction = #{@userChosen.confirmAction},
                  suppressStatusbarUpdateIcon =
-                   #{userChosen.suppressStatusbarUpdateIcon},
-                 verbose = #{userChosen.verbose}"
+                   #{@userChosen.suppressStatusbarUpdateIcon},
+                 verbose = #{@userChosen.verbose}"
+                 , forced = true
 
 
   # Upon package activation run:
   activate: ->
-    #
-    @setUserChoice()
-    #
-    @verboseMsg "Deferring initial check: will launch in
-                  #{CHECK_DELAY/1000} seconds"
-    @initialCheck = setTimeout(@checkTimestamp.bind(this), CHECK_DELAY)
-    #
-    @verboseMsg 'Scheduling check'
-    @scheduledCheck = setInterval(@checkTimestamp.bind(this),
-                        userChosen.checkInterval)
-    #
-    if userChosen.suppressStatusbarUpdateIcon
+    mainScope = this
+    # Hack: suppress status bar icon
+    if (atom.config.get "suppressStatusbarUpdateIcon" is
+          option.suppressStatusbarUpdateIcon.enabled)
       notificationHandler ?= require './notification-handler'
       notificationHandler.suppressStatusbarUpdateIcon()
+    # Defer to reduce load on Atom
+    @verboseMsg "Deferring initial check: will launch in
+                  #{CHECK_DELAY/1000} seconds"
+    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), CHECK_DELAY)
 
 
   # Upon package deactivation run:
   deactivate: ->
-    clearTimeOut @initialCheck
-    clearInterval @scheduledCheck
+    clearTimeOut @scheduledCheck if @scheduledCheck?
 
 
   # Specify the content of the notification bubble. Called by
-  #   `@setPendingUpdates` if `userChosen.notifyMe` is true
+  #   `@setPendingUpdates` if `@userChosen.notifyMe` is true
   summonNotifier: (pendingUpdates) ->
     @verboseMsg 'Posting notification'
     notificationHandler ?= require './notification-handler'
     notificationHandler.announceUpdates(
       updatables = pendingUpdates,
-      saySomething = (userChosen.autoUpdate or userChosen.confirmAction),
-      actionRequired = userChosen.confirmAction,
-      confirmMsg = if userChosen.confirmAction then notificationHandler.
+      saySomething = (@userChosen.autoUpdate or @userChosen.confirmAction),
+      actionRequired = @userChosen.confirmAction,
+      confirmMsg = if @userChosen.confirmAction then notificationHandler.
         generateConfirmMsg(pendingUpdates) else null)
 
 
-  # Wrapper function that trigger the update of the specified packages
+  # Wrapper function that trigger updating of the listed packages
   summonUpdater: (pendingUpdates) ->
     @verboseMsg 'Processing pending updates'
     updateHandler ?= require './update-handler'
@@ -192,8 +187,8 @@ module.exports =
       @verboseMsg "#{pendingUpdates.length}
                     update#{if pendingUpdates.length > 1 then 's' else ''}
                     found"
-      @summonNotifier(pendingUpdates) if userChosen.notifyMe
-      @summonUpdater(pendingUpdates) if userChosen.autoUpdate
+      @summonNotifier(pendingUpdates) if @userChosen.notifyMe
+      @summonUpdater(pendingUpdates) if @userChosen.autoUpdate
     else
       @verboseMsg "No update(s) found"
 
@@ -201,16 +196,22 @@ module.exports =
   # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask
   #   `update-handler` to find updates
   checkTimestamp: ->
+    @cacheUserPreferences()
     @verboseMsg 'Checking timestamp'
-    lastCheck = @getConfig('lastUpdateTimestamp')
-    nextCheck = lastCheck + userChosen.checkInterval
-    if (Date.now() > nextCheck) or debug
+    nextCheck =
+      @getConfig('lastUpdateTimestamp') + @userChosen.checkInterval
+    timeToNextCheck = nextCheck - Date.now()
+    # If timestamp expired, invoke APM
+    if timeToNextCheck < 0 or debug
       @verboseMsg 'Timestamp expired -> Checking for updates'
       updateHandler ?= require './update-handler'
       updateHandler.getOutdated(@setPendingUpdates.bind(this))
       @verboseMsg 'Overwriting timestamp'
       atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
-    else
-      timeToNextCheck = (nextCheck - Date.now()) / 1000 / 60
-      timeUnit = "minute#{if timeToNextCheck > 1 then 's' else ''}"
-      @verboseMsg "Next check in #{timeToNextCheck} #{timeUnit}"
+      timeToNextCheck = @userChosen.checkInterval
+    # Schedule next check
+    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope),
+                                 timeToNextCheck)
+    @verboseMsg "Next check: in
+                  #{timeToNextCheck / 1000 / 60}
+                  minute#{if timeToNextCheck > 1000*60 then 's' else ''}"
