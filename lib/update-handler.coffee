@@ -1,7 +1,8 @@
-{BufferedProcess} = require 'atom'
-
-
 module.exports =
+  verboseMsg: (msg, forced = false) ->
+    main.verboseMsg msg, forced
+
+
   runCommand: (args, callback) ->
     command = atom.packages.getApmPath()
     outputs = []
@@ -9,6 +10,7 @@ module.exports =
       outputs.push(output)
     exit = ->
       callback(outputs)
+    {BufferedProcess} = require 'atom'
     new BufferedProcess({command, args, stdout, exit})
 
 
@@ -16,9 +18,7 @@ module.exports =
     try
       availableUpdates = JSON.parse(apmOutputJSON)
     catch error
-      availableUpdates = null
-      console.log "autoupdate-packages: Error parsing APM output.\n
-                   #{apmOutputJSON}"
+      @verboseMsg " Error parsing APM output.\n #{apmOutputJSON}"
       return
     for availableUpdate in availableUpdates
       'name': availableUpdate.name
@@ -28,7 +28,6 @@ module.exports =
 
   getOutdated: (callback) ->
     args = ['outdated', '--json', '--no-color']
-    updatables = null
     @runCommand args, (outdatedPkgsJSON) =>
       updatables = @parseAPMOutputJSON(outdatedPkgsJSON)
       callback(updatables)
@@ -39,7 +38,7 @@ module.exports =
       args = ['install'
               '--no-color'
               "#{pendingUpdate.name}@#{pendingUpdate.latestVersion}"]
-      @runCommand args, (apmInstallMsg) =>
+      @runCommand args, (apmInstallMsg) ->
         if apmInstallMsg.indexOf('✓')
           atom.notifications.addSuccess(
             "Package has been updated successfully",
@@ -50,4 +49,4 @@ module.exports =
             "Update failed",
             {'detail': "APM output:\n  #{apmInstallMsg}", dimissable: true}
             )
-        console.log("autoupdate-packages: APM output: #{apmInstallMsg}")
+        @verboseMsg "APM output: #{apmInstallMsg}"

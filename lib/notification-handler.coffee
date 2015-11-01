@@ -1,13 +1,20 @@
-{BufferedProcess} = require 'atom'
+# {BufferedProcess} = require 'atom'
+
+main = require './main'
 
 
 module.exports =
+  verboseMsg: (msg, forced = false) ->
+    main.verboseMsg msg, forced
+
+
   generateNotificationMsg: (listOfUpdates, saySomething, actionRequired) ->
     multipleUpdates = listOfUpdates.length > 1
     titleText = "New version#{if multipleUpdates then 's' else ''} available"
     if saySomething
       contentText = if actionRequired then "
-        Would you like to update the following package#{if multipleUpdates then 's' else ''}?\n
+        Would you like to update the following
+        package#{if multipleUpdates then 's' else ''}?\n
         (Dimiss to proceed)\n
         " else '
         Now updating:\n
@@ -31,7 +38,7 @@ module.exports =
       message: "Update the package#{if multipleUpdates then 's' else ''} now?"
       buttons:
         'Yes': ->
-          require('./main').summonUpdater(listOfUpdates)
+          main.summonUpdater(listOfUpdates)
         'Not now': ->
           return
     if multipleUpdates
@@ -44,10 +51,12 @@ module.exports =
 
 
   announceUpdates: (listOfUpdates, saySomething, actionRequired, confirmMsg) ->
-    message = @generateNotificationMsg(listOfUpdates, saySomething, actionRequired)
+    message =
+      @generateNotificationMsg(listOfUpdates, saySomething, actionRequired)
     bubbleHeading = message.title
     bubbleOptions = {'detail': message.content, 'dismissable': actionRequired}
-    updateNotification = atom.notifications.addInfo(bubbleHeading, bubbleOptions)
+    updateNotification =
+      atom.notifications.addInfo(bubbleHeading, bubbleOptions)
     if actionRequired and confirmMsg?
       updateNotification.onDidDismiss -> atom.confirm(confirmMsg)
 
@@ -61,21 +70,6 @@ module.exports =
       if bottomPanel.item.constructor.name is 'status-bar'
         for tile in bottomPanel.item.rightTiles
           if tile.item.constructor.name is 'PackageUpdatesStatusView'
-            console.log 'autoupdate-packages: killed "PackageUpdatesStatusView"'
             tile.destroy()
+            @verboseMsg 'killed "PackageUpdatesStatusView"'
             return true
-
-
-  # HACK
-  # Search for `PackageUpdatesStatusView` element. Kill itself once the
-  #  `PackageUpdatesStatusView` is found or after the ammount of time specified
-  #  as `TIMEOUT`
-  suppressStatusbarUpdateIcon: ->
-    TIMEOUT = 2 * 60 * 1000
-    invokeTime = Date.now()
-    monitorID = setInterval (->
-      console.log 'autoupdate-packages: looking for "PackageUpdatesStatusView"'
-      removed = @removeStatusbarUpdateIcon()
-      if removed or (Date.now() - invokeTime > TIMEOUT)
-        clearInterval(monitorID)
-      ).bind(this), 500

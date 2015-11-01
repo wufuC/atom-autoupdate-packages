@@ -1,12 +1,12 @@
 # Debug mode
 # If true, enforce CHECK_DELAY = 0, reset lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
-debug = false
+debugMode = false
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
 # Default: 30 seconds
-CHECK_DELAY = if debug then 0 else 30*1000
+CHECK_DELAY = if debugMode then 0 else 30*1000
 
 
 # Presets of user-selectable options
@@ -96,20 +96,20 @@ module.exports =
     notifyMe: null
     confirmAction: null
     suppressStatusbarUpdateIcon: null
-    verbose: true
+    verbose: null
 
 
   # Wrapper function for retrieving user settings from Atom's keypath
   getConfig: (configName) ->
-    {BufferedProcess} = require 'atom'
-    configValue = atom.config.get("autoupdate-packages.#{configName}")
+    atom.config.get("autoupdate-packages.#{configName}")
 
 
   # Wrapper function for logging message to console
   # It tags the message by prepending `autoupdate-packages: `
-  verboseMsg: (msg, forced = false) ->
+  verboseMsg: (msg, forced = debugMode) ->
     return unless @userChosen.verbose or forced
     console.log "autoupdate-packages: #{msg}"
+
 
 
   # Retrieves user settings and set the `userChosen` object defined above
@@ -126,8 +126,7 @@ module.exports =
       (@getConfig('suppressStatusbarUpdateIcon') is
         option.suppressStatusbarUpdateIcon.enabled)
     #
-    @userChosen.verbose =
-      (@getConfig('verbose') is option.verboseModes.enabled) or debug
+    @userChosen.verbose = @getConfig('verbose') is option.verboseModes.enabled
     #
     @verboseMsg "Running mode ->
                  autoUpdate = #{@userChosen.autoUpdate},
@@ -136,17 +135,30 @@ module.exports =
                  suppressStatusbarUpdateIcon =
                    #{@userChosen.suppressStatusbarUpdateIcon},
                  verbose = #{@userChosen.verbose}"
-                 , forced = true
+
+
+  # Wait for `PackageUpdatesStatusView` element. Kill itself once the
+  #  `PackageUpdatesStatusView` is found or after the ammount of time specified
+  #  as `TIMEOUT`
+  suppressStatusbarUpdateIcon: ->
+    # die if "PackageUpdatesStatusView" could not be found within `TIMOUT`
+    TIMEOUT = 2 * 60 * 1000
+    invokeTime = Date.now()
+    @knockingStatusbar = setInterval (->
+      @verboseMsg 'hunting "PackageUpdatesStatusView"'
+      notificationHandler ?= require './notification-handler'
+      removed = notificationHandler.removeStatusbarUpdateIcon()
+      if removed or (Date.now() - invokeTime > TIMEOUT)
+        clearInterval(@knockingStatusbar)
+      ).bind(this), 500
 
 
   # Upon package activation run:
   activate: ->
     mainScope = this
+    @cacheUserPreferences()
     # Hack: suppress status bar icon
-    if (atom.config.get "suppressStatusbarUpdateIcon" is
-          option.suppressStatusbarUpdateIcon.enabled)
-      notificationHandler ?= require './notification-handler'
-      notificationHandler.suppressStatusbarUpdateIcon()
+    @suppressStatusbarUpdateIcon() if @userChosen.suppressStatusbarUpdateIcon
     # Defer to reduce load on Atom
     @verboseMsg "Deferring initial check: will launch in
                   #{CHECK_DELAY/1000} seconds"
@@ -156,6 +168,7 @@ module.exports =
   # Upon package deactivation run:
   deactivate: ->
     clearTimeOut @scheduledCheck if @scheduledCheck?
+    clearInterval @knockingStatusbar if @knockingStatusbar?
 
 
   # Specify the content of the notification bubble. Called by
@@ -202,7 +215,7 @@ module.exports =
       @getConfig('lastUpdateTimestamp') + @userChosen.checkInterval
     timeToNextCheck = nextCheck - Date.now()
     # If timestamp expired, invoke APM
-    if timeToNextCheck < 0 or debug
+    if timeToNextCheck < 0 or debugMode
       @verboseMsg 'Timestamp expired -> Checking for updates'
       updateHandler ?= require './update-handler'
       updateHandler.getOutdated(@setPendingUpdates.bind(this))
