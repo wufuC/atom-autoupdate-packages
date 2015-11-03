@@ -32,15 +32,35 @@ option =
     enabled: 'Enabled'
 
 
+class CachedUserPreferences
+  # Instance contains
+  #   * checkInterval [integer]
+  #   * autoUpdate [bool]
+  #   * notifyMe [bool]
+  #   * confirmAction [bool]
+  #   * suppressStatusbarUpdateIcon [bool]
+  #   * verbose [bool]
+  constructor: (configObj) ->
+    @checkInterval = configObj.frequency * 1000*60*60
+  #
+    for _mode, mode of option.preset when mode.key is configObj.handling
+      @autoUpdate = mode.autoUpdate
+      @notifyMe = mode.notifyMe
+      @confirmAction = mode.confirmAction
+  #
+    @suppressStatusbarUpdateIcon =
+      (configObj.suppressStatusbarUpdateIcon is
+        option.suppressStatusbarUpdateIcon.enabled)
+  #
+    @verbose = configObj.verbose is option.verboseModes.enabled
+
+
 # for deferred assignment
 mainScope = null
 updateHandler = null
 notificationHandler = null
 
 
-#
-# Package core
-#
 module.exports =
   config:
     frequency:
@@ -60,8 +80,8 @@ module.exports =
     suppressStatusbarUpdateIcon:
       title: 'Suppress status bar icon'
       description: 'If enabled, automatically dismiss the blue "X update(s)"
-                    icon/button at the lower right corner of your Atom window.
-                    WARNING: May conflict with other packages or be broken by
+                    icon/button at the lower right corner of your Atom window.\n
+                    WARNING: may conflict with other packages or be broken after
                     Atom upgrades. Please set to "Disabled" and file an issue
                     if this throws any error.'
       type: 'string'
@@ -78,9 +98,9 @@ module.exports =
       default: option.verboseModes.disabled
       order: 4
     lastUpdateTimestamp:
-      title: 'LASTUPDATE_TIMESTAMP'
+      title: 'Lastupdate timestamp'
       description: 'For internal use. Do *NOT* modify.
-                    If a forced check for update is desired, set to zero, then
+                    If a forced check-for-update is needed, set to zero, then
                     create a new window or reload the current one.'
       type: 'integer'
       default: 0
@@ -88,87 +108,87 @@ module.exports =
       order: 9
 
 
-  # Cached user-selected options
-  # Set by calling @cacheUserPreferences
-  userChosen:
-    checkInterval: null
-    autoUpdate: null
-    notifyMe: null
-    confirmAction: null
-    suppressStatusbarUpdateIcon: null
-    verbose: null
-
-
-  # Wrapper function for retrieving user settings from Atom's keypath
-  getConfig: (configName) ->
-    atom.config.get("autoupdate-packages.#{configName}")
-
-
-  # Wrapper function for logging message to console
-  # It tags the message by prepending `autoupdate-packages: `
-  verboseMsg: (msg, forced = debugMode) ->
-    return unless @userChosen.verbose or forced
-    console.log "autoupdate-packages: #{msg}"
-
-
-
-  # Retrieves user settings and set the `userChosen` object defined above
-  cacheUserPreferences: ->
+  # Upon package activation run:
+  activate: ->
+    # Save scope for rebinding functions
+    mainScope = this
     #
-    @userChosen.checkInterval = @getConfig('frequency') * 1000*60*60
+    @init()
     #
-    for _mode, mode of option.preset when mode.key is @getConfig('handling')
-      @userChosen.autoUpdate = mode.autoUpdate
-      @userChosen.notifyMe = mode.notifyMe
-      @userChosen.confirmAction = mode.confirmAction
-    #
-    @userChosen.suppressStatusbarUpdateIcon =
-      (@getConfig('suppressStatusbarUpdateIcon') is
-        option.suppressStatusbarUpdateIcon.enabled)
-    #
-    @userChosen.verbose = @getConfig('verbose') is option.verboseModes.enabled
-    #
+    @monitorConfig =
+      atom.config.onDidChange 'autoupdate-packages', (snapshots) =>
+        for _option, _value of snapshots.oldValue
+          oldValue = _value
+          newValue = snapshots.newValue[_option]
+          if (oldValue isnt newValue) and (_option isnt 'lastUpdateTimestamp')
+            @init(snapshots.newValue)
+
+
+  # Upon package deactivation run:
+  deactivate: ->
+    clearTimeout @scheduledCheck if @scheduledCheck?
+    clearInterval @knockingStatusbar if @knockingStatusbar?
+    @monitorConfig.dispose() if @monitorConfig?
+
+
+  init: (configObj = @getConfig()) ->
+    # Clear sceduled timestamp check
+    clearTimeout @scheduledCheck if @scheduledCheck?
+    # retrieve and cache user preferences
+    @userChosen = new CachedUserPreferences configObj
     @verboseMsg "Running mode ->
-                 autoUpdate = #{@userChosen.autoUpdate},
-                 notifyMe = #{@userChosen.notifyMe},
-                 confirmAction = #{@userChosen.confirmAction},
-                 suppressStatusbarUpdateIcon =
-                   #{@userChosen.suppressStatusbarUpdateIcon},
-                 verbose = #{@userChosen.verbose}"
+                  autoUpdate = #{@userChosen.autoUpdate},
+                  notifyMe = #{@userChosen.notifyMe},
+                  confirmAction = #{@userChosen.confirmAction},
+                  suppressStatusbarUpdateIcon =
+                    #{@userChosen.suppressStatusbarUpdateIcon},
+                  verbose = #{@userChosen.verbose}"
+    # Schedule timestamp check
+    @verboseMsg "Timestamp inspection will commence in #{CHECK_DELAY/1000} s"
+    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), CHECK_DELAY)
+    # Hack: suppress status bar icon
+    @suppressStatusbarUpdateIcon() if @userChosen.suppressStatusbarUpdateIcon
 
 
   # Wait for `PackageUpdatesStatusView` element. Kill itself once the
   #  `PackageUpdatesStatusView` is found or after the ammount of time specified
   #  as `TIMEOUT`
   suppressStatusbarUpdateIcon: ->
-    # die if "PackageUpdatesStatusView" could not be found within `TIMOUT`
+    @verboseMsg 'hunting "PackageUpdatesStatusView"'
     TIMEOUT = 2 * 60 * 1000
     invokeTime = Date.now()
+    notificationHandler ?= require './notification-handler'
     @knockingStatusbar = setInterval (->
-      @verboseMsg 'hunting "PackageUpdatesStatusView"'
-      notificationHandler ?= require './notification-handler'
       removed = notificationHandler.removeStatusbarUpdateIcon()
-      if removed or (Date.now() - invokeTime > TIMEOUT)
+      if removed
+        @verboseMsg 'killed "PackageUpdatesStatusView"'
         clearInterval(@knockingStatusbar)
-      ).bind(this), 500
+      else if Date.now() - invokeTime > TIMEOUT
+        @verboseMsg '"PackageUpdatesStatusView" not found -> stopped hunting'
+        clearInterval(@knockingStatusbar)
+      ).bind(mainScope), 500
 
 
-  # Upon package activation run:
-  activate: ->
-    mainScope = this
-    @cacheUserPreferences()
-    # Hack: suppress status bar icon
-    @suppressStatusbarUpdateIcon() if @userChosen.suppressStatusbarUpdateIcon
-    # Defer to reduce load on Atom
-    @verboseMsg "Deferring initial check: will launch in
-                  #{CHECK_DELAY/1000} seconds"
-    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), CHECK_DELAY)
-
-
-  # Upon package deactivation run:
-  deactivate: ->
-    clearTimeOut @scheduledCheck if @scheduledCheck?
-    clearInterval @knockingStatusbar if @knockingStatusbar?
+  # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask
+  #   `update-handler` to find updates
+  checkTimestamp: ->
+    @verboseMsg 'Inspecting timestamp'
+    nextCheck =
+      @getConfig('lastUpdateTimestamp') + @userChosen.checkInterval
+    timeToNextCheck = nextCheck - Date.now()
+    if timeToNextCheck < 0 or debugMode
+      @verboseMsg 'Timestamp expired -> Checking for updates...'
+      updateHandler ?= require './update-handler'
+      updateHandler.getOutdated(@setPendingUpdates.bind(mainScope))
+      @verboseMsg 'Overwriting timestamp'
+      atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
+      timeToNextCheck = @userChosen.checkInterval
+    # Schedule next check
+    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope),
+                                 timeToNextCheck + 1)
+    @verboseMsg "Will check for updates again in
+                  #{timeToNextCheck / 1000 / 60}
+                  minute#{if timeToNextCheck > 1000*60 then 's' else ''}"
 
 
   # Specify the content of the notification bubble. Called by
@@ -184,7 +204,7 @@ module.exports =
         generateConfirmMsg(pendingUpdates) else null)
 
 
-  # Wrapper function that trigger updating of the listed packages
+  # Wrapper function that triggers updating of the listed packages
   summonUpdater: (pendingUpdates) ->
     @verboseMsg 'Processing pending updates'
     updateHandler ?= require './update-handler'
@@ -206,25 +226,16 @@ module.exports =
       @verboseMsg "No update(s) found"
 
 
-  # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask
-  #   `update-handler` to find updates
-  checkTimestamp: ->
-    @cacheUserPreferences()
-    @verboseMsg 'Checking timestamp'
-    nextCheck =
-      @getConfig('lastUpdateTimestamp') + @userChosen.checkInterval
-    timeToNextCheck = nextCheck - Date.now()
-    # If timestamp expired, invoke APM
-    if timeToNextCheck < 0 or debugMode
-      @verboseMsg 'Timestamp expired -> Checking for updates'
-      updateHandler ?= require './update-handler'
-      updateHandler.getOutdated(@setPendingUpdates.bind(this))
-      @verboseMsg 'Overwriting timestamp'
-      atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
-      timeToNextCheck = @userChosen.checkInterval
-    # Schedule next check
-    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope),
-                                 timeToNextCheck)
-    @verboseMsg "Next check: in
-                  #{timeToNextCheck / 1000 / 60}
-                  minute#{if timeToNextCheck > 1000*60 then 's' else ''}"
+  # Wrapper function for retrieving user settings from Atom's keypath
+  getConfig: (configName) ->
+    if configName?
+      atom.config.get("autoupdate-packages.#{configName}")
+    else
+      atom.config.get("autoupdate-packages")
+
+
+  # Wrapper function for logging message to console
+  # It tags the message by prepending 'autoupdate-packages: '
+  verboseMsg: (msg, forced = debugMode) ->
+    return unless @userChosen.verbose or forced
+    console.log "autoupdate-packages: #{msg}"

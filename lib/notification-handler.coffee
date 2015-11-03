@@ -1,13 +1,4 @@
-# {BufferedProcess} = require 'atom'
-
-main = require './main'
-
-
 module.exports =
-  verboseMsg: (msg, forced = false) ->
-    main.verboseMsg msg, forced
-
-
   generateNotificationMsg: (listOfUpdates, saySomething, actionRequired) ->
     multipleUpdates = listOfUpdates.length > 1
     titleText = "New version#{if multipleUpdates then 's' else ''} available"
@@ -71,5 +62,4 @@ module.exports =
         for tile in bottomPanel.item.rightTiles
           if tile.item.constructor.name is 'PackageUpdatesStatusView'
             tile.destroy()
-            @verboseMsg 'killed "PackageUpdatesStatusView"'
             return true

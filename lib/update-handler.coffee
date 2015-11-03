@@ -1,3 +1,6 @@
+main = require './main'
+
+
 module.exports =
   verboseMsg: (msg, forced = false) ->
     main.verboseMsg msg, forced
@@ -38,15 +41,15 @@ module.exports =
       args = ['install'
               '--no-color'
               "#{pendingUpdate.name}@#{pendingUpdate.latestVersion}"]
-      @runCommand args, (apmInstallMsg) ->
+      @runCommand args, (apmInstallMsg) =>
         if apmInstallMsg.indexOf('✓')
           atom.notifications.addSuccess(
             "Package has been updated successfully",
-            {'detail': "APM output:\n  #{apmInstallMsg}", dimissable: false}
+            {'detail': "APM output:\n#{apmInstallMsg}", dimissable: false}
             )
         else
           atom.notifications.addWarning(
             "Update failed",
-            {'detail': "APM output:\n  #{apmInstallMsg}", dimissable: true}
+            {'detail': "APM output:\n#{apmInstallMsg}", dimissable: true}
             )
         @verboseMsg "APM output: #{apmInstallMsg}"
