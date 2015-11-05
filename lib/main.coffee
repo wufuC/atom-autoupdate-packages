@@ -78,12 +78,9 @@ module.exports =
       default: option.preset.mode0.key
       order: 2
     suppressStatusbarUpdateIcon:
-      title: 'Suppress status bar icon'
+      title: 'Suppress status bar icon/button'
       description: 'If enabled, automatically dismiss the blue "X update(s)"
-                    icon/button at the lower right corner of your Atom window.\n
-                    WARNING: may conflict with other packages or be broken after
-                    Atom upgrades. Please set to "Disabled" and file an issue
-                    if this throws any error.'
+                    icon/button at the lower right corner of your Atom window.'
       type: 'string'
       enum:
         for mode, description of option.suppressStatusbarUpdateIcon
