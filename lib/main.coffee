@@ -88,7 +88,7 @@ module.exports =
       enum:
         for mode, description of option.suppressStatusbarUpdateIcon
           description
-      default: option.suppressStatusbarUpdateIcon.disabled
+      default: option.suppressStatusbarUpdateIcon.enabled
       order: 3
     verbose:
       title: 'Verbose log'
@@ -147,26 +147,42 @@ module.exports =
     @verboseMsg "Timestamp inspection will commence in #{CHECK_DELAY/1000} s"
     @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), CHECK_DELAY)
     # Hack: suppress status bar icon
-    @suppressStatusbarUpdateIcon() if @userChosen.suppressStatusbarUpdateIcon
+    @suppressStatusbarUpdateIcon()
 
 
   # Wait for `PackageUpdatesStatusView` element. Kill itself once the
   #  `PackageUpdatesStatusView` is found or after the ammount of time specified
   #  as `TIMEOUT`
   suppressStatusbarUpdateIcon: ->
-    @verboseMsg 'hunting "PackageUpdatesStatusView"'
-    TIMEOUT = 2 * 60 * 1000
     invokeTime = Date.now()
+    TIMEOUT = 2 * 60 * 1000
     notificationHandler ?= require './notification-handler'
+    @verboseMsg 'hunting "PackageUpdatesStatusView"'
     @knockingStatusbar = setInterval (->
-      removed = notificationHandler.removeStatusbarUpdateIcon()
-      if removed
-        @verboseMsg 'killed "PackageUpdatesStatusView"'
+      toggled = notificationHandler
+                  .hidePackageUpdatesStatusView(hide =
+                    @userChosen.suppressStatusbarUpdateIcon)
+      if toggled?
+        @verboseMsg 'toggled "PackageUpdatesStatusView"'
         clearInterval(@knockingStatusbar)
-      else if Date.now() - invokeTime > TIMEOUT
-        @verboseMsg '"PackageUpdatesStatusView" not found -> stopped hunting'
+      else if  Date.now() - invokeTime > TIMEOUT
+        @verboseMsg '"PackageUpdatesStatusView" not found'
         clearInterval(@knockingStatusbar)
-      ).bind(mainScope), 500
+      ).bind(mainScope), 1000
+
+  # suppressStatusbarUpdateIcon: ->
+  #   TIMEOUT = 2 * 60 * 1000
+  #   invokeTime = Date.now()
+  #   notificationHandler ?= require './notification-handler'
+  #   @knockingStatusbar = setInterval (->
+  #     removed = notificationHandler.removeStatusbarUpdateIcon()
+  #     if removed
+  #       @verboseMsg 'killed "PackageUpdatesStatusView"'
+  #       clearInterval(@knockingStatusbar)
+  #     else if Date.now() - invokeTime > TIMEOUT
+  #       @verboseMsg '"PackageUpdatesStatusView" not found -> stopped hunting'
+  #       clearInterval(@knockingStatusbar)
+  #     ).bind(mainScope), 500
 
 
   # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask

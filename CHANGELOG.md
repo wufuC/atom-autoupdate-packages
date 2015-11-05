@@ -1,3 +1,6 @@
+## 1.2.2
+* New: When settings are modified, new settings apply immediately
+
 ## 1.2.1
 * Fix: `Suppress status bar icon` now defaults to be 'Disabled' as this function
          does not utilize Atom's API and may conflicts with other packages or be
