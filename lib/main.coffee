@@ -25,8 +25,8 @@ option =
       key: 'Notify me only'
       autoUpdate: false, notifyMe: true, confirmAction: false
   suppressStatusbarUpdateIcon:
-    disabled: 'Disabled (default)'
-    enabled: 'Enabled'
+    disabled: 'Disabled'
+    enabled: 'Enabled (default)'
   verboseModes:
     disabled: 'Disabled (default)'
     enabled: 'Enabled'
