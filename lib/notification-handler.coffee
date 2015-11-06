@@ -64,9 +64,9 @@ module.exports =
   #           return tile
 
   hidePackageUpdatesStatusView: (hide = true) ->
-    toggled = null
-    buttons = document.getElementsByClassName('package-updates-status-view inline-block text text-info')
-    for button in buttons when buttons.length isnt 0
-      button.style.display = if hide then "None" else ""
-      toggled = true
-    return true if toggled
+    buttons = document.getElementsByClassName(
+      'package-updates-status-view inline-block text text-info')
+    if buttons.length > 0
+      for button in buttons
+        button.style.display = if hide then "None" else ""
+      return true

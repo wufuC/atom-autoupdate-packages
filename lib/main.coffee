@@ -65,7 +65,7 @@ module.exports =
   config:
     frequency:
       title: 'Check frequency'
-      description: 'Check for update every ___ hour(s).'
+      description: "Check for update every ___ hour(s)\nMinimum: 1 hour"
       type: 'integer'
       default: 6
       minimum: 1
@@ -109,16 +109,15 @@ module.exports =
   activate: ->
     # Save scope for rebinding functions
     mainScope = this
-    #
+    # Initialize
     @init()
-    #
+    # Re-initialize when settings are modified
     @monitorConfig =
-      atom.config.onDidChange 'autoupdate-packages', (snapshots) =>
-        for _option, _value of snapshots.oldValue
-          oldValue = _value
-          newValue = snapshots.newValue[_option]
-          if (oldValue isnt newValue) and (_option isnt 'lastUpdateTimestamp')
-            @init(snapshots.newValue)
+      atom.config.onDidChange 'autoupdate-packages', (contrastedValues) ->
+        for item, oldSetting of contrastedValues.oldValue
+          newSetting = contrastedValues.newValue[item]
+          if (item isnt 'lastUpdateTimestamp') and (oldSetting isnt newSetting)
+            @init(contrastedValues.newValue).bind(mainScope)
 
 
   # Upon package deactivation run:
@@ -129,8 +128,9 @@ module.exports =
 
 
   init: (configObj = @getConfig()) ->
-    # Clear sceduled timestamp check
+    # Clear sceduled tasks
     clearTimeout @scheduledCheck if @scheduledCheck?
+    clearInterval @knockingStatusbar if @knockingStatusbar?
     # retrieve and cache user preferences
     @userChosen = new CachedUserPreferences configObj
     @verboseMsg "Running mode ->
@@ -148,42 +148,30 @@ module.exports =
 
 
   # Wait for `PackageUpdatesStatusView` element. Kill itself once the
-  #  `PackageUpdatesStatusView` is found or after the ammount of time specified
-  #  as `TIMEOUT`
+  #  it is found or specific ammount (`TIMEOUT`) of time has past
   suppressStatusbarUpdateIcon: ->
     invokeTime = Date.now()
     TIMEOUT = 2 * 60 * 1000
     notificationHandler ?= require './notification-handler'
-    @verboseMsg 'hunting "PackageUpdatesStatusView"'
+    @verboseMsg 'looking for "PackageUpdatesStatusView"'
     @knockingStatusbar = setInterval (->
       toggled = notificationHandler
                   .hidePackageUpdatesStatusView(hide =
                     @userChosen.suppressStatusbarUpdateIcon)
       if toggled?
-        @verboseMsg 'toggled "PackageUpdatesStatusView"'
         clearInterval(@knockingStatusbar)
+        if @userChosen.suppressStatusbarUpdateIcon
+          @verboseMsg '"PackageUpdatesStatusView" off'
+        else if not @userChosen.suppressStatusbarUpdateIcon
+          @verboseMsg '"PackageUpdatesStatusView" on'
       else if  Date.now() - invokeTime > TIMEOUT
         @verboseMsg '"PackageUpdatesStatusView" not found'
         clearInterval(@knockingStatusbar)
       ).bind(mainScope), 1000
 
-  # suppressStatusbarUpdateIcon: ->
-  #   TIMEOUT = 2 * 60 * 1000
-  #   invokeTime = Date.now()
-  #   notificationHandler ?= require './notification-handler'
-  #   @knockingStatusbar = setInterval (->
-  #     removed = notificationHandler.removeStatusbarUpdateIcon()
-  #     if removed
-  #       @verboseMsg 'killed "PackageUpdatesStatusView"'
-  #       clearInterval(@knockingStatusbar)
-  #     else if Date.now() - invokeTime > TIMEOUT
-  #       @verboseMsg '"PackageUpdatesStatusView" not found -> stopped hunting'
-  #       clearInterval(@knockingStatusbar)
-  #     ).bind(mainScope), 500
-
 
   # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask
-  #   `update-handler` to find updates
+  #   `update-handler` to find and process updates
   checkTimestamp: ->
     @verboseMsg 'Inspecting timestamp'
     nextCheck =
