@@ -50,23 +50,3 @@ module.exports =
       atom.notifications.addInfo(bubbleHeading, bubbleOptions)
     if actionRequired and confirmMsg?
       updateNotification.onDidDismiss -> atom.confirm(confirmMsg)
-
-
-  # HACK
-  # Remove the blue package icon at the bottom-righthand corner of the window
-  # TODO: find a way to retrieve the `PackageUpdatesStatusView` object directly
-  #  through `status-bar` service
-  # getPackageUpdatesStatusView: ->
-  #   for bottomPanel in atom.workspace.getBottomPanels()
-  #     if bottomPanel.item.constructor.name is 'status-bar'
-  #       for tile in bottomPanel.item.rightTiles
-  #         if tile.item.constructor.name is 'PackageUpdatesStatusView'
-  #           return tile
-
-  hidePackageUpdatesStatusView: (hide = true) ->
-    buttons = document.getElementsByClassName(
-      'package-updates-status-view inline-block text text-info')
-    if buttons.length > 0
-      for button in buttons
-        button.style.display = if hide then "None" else ""
-      return true
