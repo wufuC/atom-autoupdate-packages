@@ -55,7 +55,6 @@ class CachedUserPreferences
     @verbose = configObj.verbose is option.verboseModes.enabled
 
 
-# for deferred assignment
 mainScope = null
 updateHandler = null
 notificationHandler = null
@@ -105,14 +104,10 @@ module.exports =
       order: 9
 
 
-  # Upon package activation run:
   activate: ->
-    # Save scope for rebinding functions
     mainScope = this
-    # Initialize
     @init()
-    # Re-initialize when settings are modified
-    @monitorConfig =
+    @monitorConfig =  # Re-initialize when settings are modified
       atom.config.onDidChange 'autoupdate-packages', (contrastedValues) ->
         for item, oldSetting of contrastedValues.oldValue
           newSetting = contrastedValues.newValue[item]
@@ -120,7 +115,6 @@ module.exports =
             @init(contrastedValues.newValue).bind(mainScope)
 
 
-  # Upon package deactivation run:
   deactivate: ->
     clearTimeout @scheduledCheck if @scheduledCheck?
     clearInterval @knockingStatusbar if @knockingStatusbar?
@@ -128,10 +122,8 @@ module.exports =
 
 
   init: (configObj = @getConfig()) ->
-    # Clear sceduled tasks
     clearTimeout @scheduledCheck if @scheduledCheck?
     clearInterval @knockingStatusbar if @knockingStatusbar?
-    # retrieve and cache user preferences
     @userChosen = new CachedUserPreferences configObj
     @verboseMsg "Running mode ->
                   autoUpdate = #{@userChosen.autoUpdate},
@@ -140,10 +132,12 @@ module.exports =
                   suppressStatusbarUpdateIcon =
                     #{@userChosen.suppressStatusbarUpdateIcon},
                   verbose = #{@userChosen.verbose}"
-    # Schedule timestamp check
+    # schedule initial timestamp check
+    #   The check is delayed to reduce burden on Atom's startup process,
+    #   which is already slow
     @verboseMsg "Timestamp inspection will commence in #{CHECK_DELAY/1000} s"
     @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), CHECK_DELAY)
-    # Hack: suppress status bar icon
+    # Hack
     @suppressStatusbarUpdateIcon()
 
 
@@ -179,17 +173,17 @@ module.exports =
   #         if tile.item.constructor.name is 'PackageUpdatesStatusView'
   #           return tile
 
+
   hidePackageUpdatesStatusView: (hide = true) ->
     buttons = document.getElementsByClassName(
-      'package-updates-status-view inline-block text text-info')
+      'package-updates-status-view inline-block text text-info'
+    )
     if buttons.length > 0
       for button in buttons
         button.style.display = if hide then "None" else ""
       return true
 
 
-  # Get/set lastUpdateTimestamp and, if the timestamp is expired, ask
-  #   `update-handler` to find and process updates
   checkTimestamp: ->
     @verboseMsg 'Inspecting timestamp'
     nextCheck =
@@ -198,7 +192,7 @@ module.exports =
     if timeToNextCheck < 0 or debugMode
       @verboseMsg 'Timestamp expired -> Checking for updates...'
       updateHandler ?= require './update-handler'
-      updateHandler.getOutdated(@setPendingUpdates.bind(mainScope))
+      updateHandler.getOutdated()
       @verboseMsg 'Overwriting timestamp'
       atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
       timeToNextCheck = @userChosen.checkInterval
@@ -210,42 +204,6 @@ module.exports =
                   minute#{if timeToNextCheck > 1000*60 then 's' else ''}"
 
 
-  # Specify the content of the notification bubble. Called by
-  #   `@setPendingUpdates` if `@userChosen.notifyMe` is true
-  summonNotifier: (pendingUpdates) ->
-    @verboseMsg 'Posting notification'
-    notificationHandler ?= require './notification-handler'
-    notificationHandler.announceUpdates(
-      updatables = pendingUpdates,
-      saySomething = (@userChosen.autoUpdate or @userChosen.confirmAction),
-      actionRequired = @userChosen.confirmAction,
-      confirmMsg = if @userChosen.confirmAction then notificationHandler.
-        generateConfirmMsg(pendingUpdates) else null)
-
-
-  # Wrapper function that triggers updating of the listed packages
-  summonUpdater: (pendingUpdates) ->
-    @verboseMsg 'Processing pending updates'
-    updateHandler ?= require './update-handler'
-    updateHandler.processPendingUpdates(pendingUpdates)
-
-
-  # Intended to be used as a callback for `update-handler.getOutdated`.
-  #   It catches the output of `update-handler.getOutdated`, then, if needed,
-  #   redirects it to `@summonNotifier` and/or `@summonUpdater` to trigger
-  #   notifications and package-update
-  setPendingUpdates: (pendingUpdates) ->
-    if pendingUpdates? and (pendingUpdates.length > 0)
-      @verboseMsg "#{pendingUpdates.length}
-                    update#{if pendingUpdates.length > 1 then 's' else ''}
-                    found"
-      @summonNotifier(pendingUpdates) if @userChosen.notifyMe
-      @summonUpdater(pendingUpdates) if @userChosen.autoUpdate
-    else
-      @verboseMsg "No update(s) found"
-
-
-  # Wrapper function for retrieving user settings from Atom's keypath
   getConfig: (configName) ->
     if configName?
       atom.config.get("autoupdate-packages.#{configName}")
@@ -253,8 +211,6 @@ module.exports =
       atom.config.get("autoupdate-packages")
 
 
-  # Wrapper function for logging message to console
-  # It tags the message by prepending 'autoupdate-packages: '
   verboseMsg: (msg, forced = debugMode) ->
     return unless @userChosen.verbose or forced
     console.log "autoupdate-packages: #{msg}"

@@ -1,20 +1,14 @@
 main = require './main'
 
+notificationHandler = null
+
 
 module.exports =
-  verboseMsg: (msg, forced = false) ->
-    main.verboseMsg msg, forced
-
-
-  runCommand: (args, callback) ->
-    command = atom.packages.getApmPath()
-    outputs = []
-    stdout = (output) ->
-      outputs.push(output)
-    exit = ->
-      callback(outputs)
-    {BufferedProcess} = require 'atom'
-    new BufferedProcess({command, args, stdout, exit})
+  getOutdated: ->
+    args = ['outdated', '--json', '--no-color']
+    @runCommand args, (outdatedPkgsJSON) =>
+      updatables = @parseAPMOutputJSON(outdatedPkgsJSON)
+      @setPendingUpdates(updatables) if updatables?
 
 
   parseAPMOutputJSON: (apmOutputJSON) ->
@@ -29,11 +23,35 @@ module.exports =
       'latestVersion': availableUpdate.latestVersion
 
 
-  getOutdated: (callback) ->
-    args = ['outdated', '--json', '--no-color']
-    @runCommand args, (outdatedPkgsJSON) =>
-      updatables = @parseAPMOutputJSON(outdatedPkgsJSON)
-      callback(updatables)
+  setPendingUpdates: (pendingUpdates) ->
+    if pendingUpdates? and (pendingUpdates.length > 0)
+      @verboseMsg "#{pendingUpdates.length}
+                    update#{if pendingUpdates.length > 1 then 's' else ''}
+                    found"
+      @summonNotifier(pendingUpdates) if main.userChosen.notifyMe
+      @processPendingUpdates(pendingUpdates) if main.userChosen.autoUpdate
+    else
+      @verboseMsg "No update(s) found"
+
+
+  # Specify the content of the notification bubble. Called by
+  #   `@setPendingUpdates` if `main.userChosen.notifyMe` is true
+  summonNotifier: (pendingUpdates) ->
+    @verboseMsg 'Posting notification'
+    notificationHandler ?= require './notification-handler'
+    notificationHandler.announceUpdates(
+      updatables = pendingUpdates
+      saySomething = main.userChosen.autoUpdate or main.userChosen.confirmAction
+      actionRequired = main.userChosen.confirmAction
+      confirmMsg = if main.userChosen.confirmAction then notificationHandler.
+        generateConfirmMsg(pendingUpdates) else null
+    )
+
+
+  # Wrapper function that triggers updating of the listed packages
+  # summonUpdater: (pendingUpdates) ->
+  #   @verboseMsg 'Processing pending updates'
+  #   @processPendingUpdates(pendingUpdates)
 
 
   processPendingUpdates: (pendingUpdates) ->
@@ -53,3 +71,18 @@ module.exports =
             {'detail': "APM output:\n#{apmInstallMsg}", dimissable: true}
             )
         @verboseMsg "APM output: #{apmInstallMsg}"
+
+
+  runCommand: (args, callback) ->
+    command = atom.packages.getApmPath()
+    outputs = []
+    stdout = (output) ->
+      outputs.push(output)
+    exit = ->
+      callback(outputs)
+    {BufferedProcess} = require 'atom'
+    new BufferedProcess({command, args, stdout, exit})
+
+
+  verboseMsg: (msg, forced = false) ->
+    main.verboseMsg msg, forced
