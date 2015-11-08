@@ -57,3 +57,26 @@ module.exports =
       atom.notifications.addInfo(bubbleHeading, bubbleOptions)
     if actionRequired and confirmMsg?
       updateNotification.onDidDismiss -> atom.confirm(confirmMsg)
+
+
+  announceUpgradeOutcome: (apmInstallMsg) ->
+    if apmInstallMsg.indexOf('✓')
+      if main.userChosen.notifyMe
+        atom.notifications.addSuccess(
+          "Package has been updated successfully"
+          {
+            'detail': "APM output:\n#{apmInstallMsg}"
+            dimissable: false
+          }
+        )
+    else
+      atom.notifications.addWarning(
+        "Update failed"
+        {
+          'detail': "APM output:\n#{apmInstallMsg}\n
+          This could be due to network problem. Please submit a bug report if
+          this problem persists."
+          dimissable: true
+        }
+      )
+    main.verboseMsg "APM output: #{apmInstallMsg}"
