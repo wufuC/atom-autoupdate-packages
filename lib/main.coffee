@@ -1,3 +1,8 @@
+mainScope = null
+updateHandler = null
+notificationHandler = null
+
+
 # Debug mode
 # If true, enforce CHECK_DELAY = 0, reset lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
@@ -55,11 +60,6 @@ class CachedUserPreferences
     @verbose = configObj.verbose is option.verboseModes.enabled
 
 
-mainScope = null
-updateHandler = null
-notificationHandler = null
-
-
 module.exports =
   config:
     frequency:
@@ -95,9 +95,7 @@ module.exports =
       order: 4
     lastUpdateTimestamp:
       title: 'Lastupdate timestamp'
-      description: 'For internal use. Do *NOT* modify.
-                    If a forced check-for-update is needed, set to zero, then
-                    create a new window or reload the current one.'
+      description: 'For internal use. Do *NOT* modify.'
       type: 'integer'
       default: 0
       minimum: 0
@@ -141,8 +139,8 @@ module.exports =
     @suppressStatusbarUpdateIcon()
 
 
-  # Wait for `PackageUpdatesStatusView` element. Kill itself once the
-  #  it is found or specific ammount (`TIMEOUT`) of time has past
+  # Wait for `PackageUpdatesStatusView` element. Kill itself once
+  #  it is found or specific ammount (`TIMEOUT`) of time has passed
   suppressStatusbarUpdateIcon: ->
     invokeTime = Date.now()
     TIMEOUT = 2 * 60 * 1000
@@ -163,9 +161,7 @@ module.exports =
 
 
   # HACK
-  # Remove the blue package icon at the bottom-righthand corner of the window
-  # TODO: find a way to retrieve the `PackageUpdatesStatusView` object directly
-  #  through `status-bar` service
+  # Return the `PackageUpdatesStatusView` Tile object created by `settings-view`
   # getPackageUpdatesStatusView: ->
   #   for bottomPanel in atom.workspace.getBottomPanels()
   #     if bottomPanel.item.constructor.name is 'status-bar'
@@ -176,20 +172,19 @@ module.exports =
 
   hidePackageUpdatesStatusView: (hide = true) ->
     buttons = document.getElementsByClassName(
-      'package-updates-status-view inline-block text text-info'
-    )
+      'package-updates-status-view inline-block text text-info')
     if buttons.length > 0
       for button in buttons
         button.style.display = if hide then "None" else ""
       return true
 
 
-  checkTimestamp: ->
+  checkTimestamp: (skipped = debugMode) ->
     @verboseMsg 'Inspecting timestamp'
     nextCheck =
       @getConfig('lastUpdateTimestamp') + @userChosen.checkInterval
     timeToNextCheck = nextCheck - Date.now()
-    if timeToNextCheck < 0 or debugMode
+    if timeToNextCheck < 0 or skipped
       @verboseMsg 'Timestamp expired -> Checking for updates...'
       updateHandler ?= require './update-handler'
       updateHandler.getOutdated()
