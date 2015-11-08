@@ -102,6 +102,11 @@ module.exports =
       order: 9
 
 
+  # `CachedUserPreferences` instance
+  # exported for the handler helper modules
+  userChosen: null
+
+
   activate: ->
     mainScope = this
     @init()
