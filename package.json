@@ -1,7 +1,7 @@
 {
   "name": "autoupdate-packages",
   "main": "./lib/main",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Keep your packages updated automatically.",
   "keywords": [
     "autoupdate"
