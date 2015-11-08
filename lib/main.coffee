@@ -106,33 +106,34 @@ module.exports =
     mainScope = this
     @init()
     @monitorConfig =  # Re-initialize when settings are modified
-      atom.config.onDidChange 'autoupdate-packages', (contrastedValues) ->
+      atom.config.onDidChange 'autoupdate-packages', ((contrastedValues) ->
         for item, oldSetting of contrastedValues.oldValue
           newSetting = contrastedValues.newValue[item]
-          if (item isnt 'lastUpdateTimestamp') and (oldSetting isnt newSetting)
-            @init(contrastedValues.newValue).bind(mainScope)
+          if item isnt 'lastUpdateTimestamp' and oldSetting isnt newSetting
+            @init(contrastedValues.newValue)
+            break
+      ).bind(mainScope)
 
 
   deactivate: ->
     clearTimeout @scheduledCheck if @scheduledCheck?
     clearInterval @knockingStatusbar if @knockingStatusbar?
-    @monitorConfig.dispose() if @monitorConfig?
+    @monitorConfig?.dispose()
 
 
   init: (configObj = @getConfig()) ->
     clearTimeout @scheduledCheck if @scheduledCheck?
     clearInterval @knockingStatusbar if @knockingStatusbar?
     @userChosen = new CachedUserPreferences configObj
-    @verboseMsg "Running mode ->
+    @verboseMsg "Current mode ->
                   autoUpdate = #{@userChosen.autoUpdate},
                   notifyMe = #{@userChosen.notifyMe},
                   confirmAction = #{@userChosen.confirmAction},
                   suppressStatusbarUpdateIcon =
                     #{@userChosen.suppressStatusbarUpdateIcon},
                   verbose = #{@userChosen.verbose}"
-    # schedule initial timestamp check
-    #   The check is delayed to reduce burden on Atom's startup process,
-    #   which is already slow
+    # Schedule initial timestamp check. The check is delayed to reduce burden
+    #   on Atom's startup process, which is already slow
     @verboseMsg "Timestamp inspection will commence in #{CHECK_DELAY/1000} s"
     @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), CHECK_DELAY)
     # Hack
@@ -150,13 +151,11 @@ module.exports =
                     @userChosen.suppressStatusbarUpdateIcon)
       if toggled?
         clearInterval(@knockingStatusbar)
-        if @userChosen.suppressStatusbarUpdateIcon
-          @verboseMsg '"PackageUpdatesStatusView" off'
-        else if not @userChosen.suppressStatusbarUpdateIcon
-          @verboseMsg '"PackageUpdatesStatusView" on'
-      else if  Date.now() - invokeTime > TIMEOUT
-        @verboseMsg '"PackageUpdatesStatusView" not found'
+        @verboseMsg "'PackageUpdatesStatusView' #{
+          if @userChosen.suppressStatusbarUpdateIcon then 'off' else 'on'}"
+      else if Date.now() - invokeTime > TIMEOUT
         clearInterval(@knockingStatusbar)
+        @verboseMsg "'PackageUpdatesStatusView' not found"
       ).bind(mainScope), 1000
 
 

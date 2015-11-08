@@ -1,3 +1,7 @@
+main = require './main'
+updateHandler = null
+
+
 module.exports =
   generateNotificationMsg: (listOfUpdates, saySomething, actionRequired) ->
     multipleUpdates = listOfUpdates.length > 1
@@ -29,15 +33,18 @@ module.exports =
       message: "Update the package#{if multipleUpdates then 's' else ''} now?"
       buttons:
         'Yes': ->
-          main.summonUpdater(listOfUpdates)
+          main.verboseMsg 'confirm prompt -> proceed'
+          updateHandler ?= require './update-handler'
+          updateHandler.processPendingUpdates(listOfUpdates)
         'Not now': ->
-          return
+          main.verboseMsg 'confirm prompt -> pass'
     if multipleUpdates
       confimMsgObj.buttons['Let me choose what to update'] = ->
         atom.commands.dispatch(
           atom.views.getView(atom.workspace),
           'settings-view:check-for-package-updates'
           )
+        main.verboseMsg 'confirm prompt -> opening settings-view'
     return confimMsgObj
 
 

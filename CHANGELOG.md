@@ -2,6 +2,7 @@
 * Detect change in settings. New settings are applied immediately.
 * `Suppress status bar icon/button` is enabled by default again.
 * `Suppress status bar icon/button` now hides the button/icon instead of removing it completely (can be revealed again by toggling this option).
+* Fix broken silent mode.
 * Reduce package loading time by up to 50%.
 
 

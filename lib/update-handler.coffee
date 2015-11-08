@@ -48,24 +48,18 @@ module.exports =
     )
 
 
-  # Wrapper function that triggers updating of the listed packages
-  # summonUpdater: (pendingUpdates) ->
-  #   @verboseMsg 'Processing pending updates'
-  #   @processPendingUpdates(pendingUpdates)
-
-
   processPendingUpdates: (pendingUpdates) ->
     for pendingUpdate in pendingUpdates
       args = ['install'
               '--no-color'
               "#{pendingUpdate.name}@#{pendingUpdate.latestVersion}"]
       @runCommand args, (apmInstallMsg) =>
-        if apmInstallMsg.indexOf('✓')
+        if apmInstallMsg.indexOf('✓') and main.userChosen.notifyMe
           atom.notifications.addSuccess(
             "Package has been updated successfully",
             {'detail': "APM output:\n#{apmInstallMsg}", dimissable: false}
             )
-        else
+        else if not apmInstallMsg.indexOf('✓')
           atom.notifications.addWarning(
             "Update failed",
             {'detail': "APM output:\n#{apmInstallMsg}", dimissable: true}
