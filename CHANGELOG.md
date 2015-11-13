@@ -1,3 +1,7 @@
+## 1.3.1
+* Unhide the 'X updates(s)' icon/button when the package is disabled
+
+
 ## 1.3.0
 * Detect change in settings. New settings are applied immediately.
 * `Suppress status bar icon/button` is enabled by default again.

@@ -121,9 +121,14 @@ module.exports =
 
 
   deactivate: ->
-    clearTimeout @scheduledCheck if @scheduledCheck?
-    clearInterval @knockingStatusbar if @knockingStatusbar?
     @monitorConfig?.dispose()
+    if @scheduledCheck?
+      @verboseMsg 'quitting -> clear scheduled check'
+      clearTimeout @scheduledCheck
+    if @knockingStatusbar?
+      @verboseMsg 'quitting -> stop searching for `PackageUpdatesStatusView`'
+      clearInterval @knockingStatusbar
+    @hidePackageUpdatesStatusView(hide = false)
 
 
   init: (configObj = @getConfig()) ->
@@ -150,17 +155,17 @@ module.exports =
   suppressStatusbarUpdateIcon: ->
     invokeTime = Date.now()
     TIMEOUT = 2 * 60 * 1000
-    @verboseMsg 'looking for "PackageUpdatesStatusView"'
+    @verboseMsg 'looking for `PackageUpdatesStatusView`'
     @knockingStatusbar = setInterval (->
       toggled = @hidePackageUpdatesStatusView(hide =
                     @userChosen.suppressStatusbarUpdateIcon)
       if toggled?
         clearInterval(@knockingStatusbar)
-        @verboseMsg "'PackageUpdatesStatusView' #{
+        @verboseMsg "`PackageUpdatesStatusView` #{
           if @userChosen.suppressStatusbarUpdateIcon then 'off' else 'on'}"
       else if Date.now() - invokeTime > TIMEOUT
         clearInterval(@knockingStatusbar)
-        @verboseMsg "'PackageUpdatesStatusView' not found"
+        @verboseMsg "`PackageUpdatesStatusView` not found"
       ).bind(mainScope), 1000
 
 
@@ -207,7 +212,7 @@ module.exports =
     if configName?
       atom.config.get("autoupdate-packages.#{configName}")
     else
-      atom.config.get("autoupdate-packages")
+      atom.config.get('autoupdate-packages')
 
 
   verboseMsg: (msg, forced = debugMode) ->
