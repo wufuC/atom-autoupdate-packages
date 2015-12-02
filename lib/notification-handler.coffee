@@ -25,8 +25,6 @@ module.exports =
     return messageObj
 
 
-  # Compose the content of the confirmation diaglogue. Called by
-  #   `main/summonNotifier`
   generateConfirmMsg: (listOfUpdates) ->
     multipleUpdates = listOfUpdates.length > 1
     confimMsgObj =

@@ -102,8 +102,7 @@ module.exports =
       order: 9
 
 
-  # `CachedUserPreferences` instance
-  # exported for the handler helper modules
+  # `CachedUserPreferences` instance; exported for the handlers
   userChosen: null
 
 
@@ -150,8 +149,6 @@ module.exports =
     @suppressStatusbarUpdateIcon()
 
 
-  # Wait for `PackageUpdatesStatusView` element. Kill itself once
-  #  it is found or specific ammount (`TIMEOUT`) of time has passed
   suppressStatusbarUpdateIcon: ->
     invokeTime = Date.now()
     TIMEOUT = 2 * 60 * 1000
