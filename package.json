@@ -2,9 +2,9 @@
   "name": "autoupdate-packages",
   "main": "./lib/main",
   "version": "1.3.0",
-  "description": "Keep your packages updated automatically.",
+  "description": "Keep your packages updated automatically (and silently).",
   "keywords": [
-    "autoupdate"
+    "auto", "silent"
   ],
   "repository": "https://github.com/wufuC/atom-autoupdate-packages",
   "license": "MIT",
