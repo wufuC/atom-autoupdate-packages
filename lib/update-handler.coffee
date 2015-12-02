@@ -14,7 +14,7 @@ module.exports =
     try
       availableUpdates = JSON.parse(apmOutputJSON)
     catch error
-      main.verboseMsg " Error parsing APM output.\n #{apmOutputJSON}"
+      main.verboseMsg "Error parsing APM output.\n #{apmOutputJSON}"
       return
     for availableUpdate in availableUpdates
       'name': availableUpdate.name
