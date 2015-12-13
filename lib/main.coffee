@@ -38,7 +38,7 @@ option =
 
 
 class CachedUserPreferences
-  # Instance contains
+  # an instance contains
   #   * checkInterval [integer]
   #   * autoUpdate [bool]
   #   * notifyMe [bool]
@@ -46,17 +46,17 @@ class CachedUserPreferences
   #   * suppressStatusbarUpdateIcon [bool]
   #   * verbose [bool]
   constructor: (configObj) ->
+    # convert hours to milliseconds
     @checkInterval = configObj.frequency * 1000*60*60
-  #
+    # establish running mode
     for _mode, mode of option.preset when mode.key is configObj.handling
       @autoUpdate = mode.autoUpdate
       @notifyMe = mode.notifyMe
       @confirmAction = mode.confirmAction
-  #
+    # misc
     @suppressStatusbarUpdateIcon =
       (configObj.suppressStatusbarUpdateIcon is
         option.suppressStatusbarUpdateIcon.enabled)
-  #
     @verbose = configObj.verbose is option.verboseModes.enabled
 
 
@@ -93,6 +93,13 @@ module.exports =
       enum: (description for mode, description of option.verboseModes)
       default: option.verboseModes.disabled
       order: 4
+    updateHistory:
+      title: 'Update history'
+      description: 'A record of recent updates (in JSON format).\n
+                    Do *NOT* modify.'
+      type: 'string'
+      default: '{}'
+      order: 8
     lastUpdateTimestamp:
       title: 'Lastupdate timestamp'
       description: 'For internal use. Do *NOT* modify.'
@@ -100,11 +107,6 @@ module.exports =
       default: 0
       minimum: 0
       order: 9
-    updateHistory:
-      title: 'Update history'
-      description: 'For internal use. Do *NOT* modify.'
-      type: 'string'
-      default: '{}'
 
 
   # `CachedUserPreferences` instance; exported for the handlers
@@ -118,7 +120,8 @@ module.exports =
       atom.config.onDidChange 'autoupdate-packages', ((contrastedValues) ->
         for item, oldSetting of contrastedValues.oldValue
           newSetting = contrastedValues.newValue[item]
-          if (item not in ['lastUpdateTimestamp', 'updateHistory']) and (oldSetting isnt newSetting)
+          if (item not in ['lastUpdateTimestamp', 'updateHistory']) and
+              (oldSetting isnt newSetting)
             @init(contrastedValues.newValue)
             break
       ).bind(mainScope)
@@ -136,8 +139,10 @@ module.exports =
 
 
   init: (configObj = @getConfig()) ->
+    # cleanup for reinitialization
     clearTimeout @scheduledCheck if @scheduledCheck?
     clearInterval @knockingStatusbar if @knockingStatusbar?
+    # cache user preferences
     @userChosen = new CachedUserPreferences configObj
     @verboseMsg "Current mode ->
                   autoUpdate = #{@userChosen.autoUpdate},
@@ -152,22 +157,23 @@ module.exports =
     @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), DELAY)
     @scheduledHistroyPruning =
       setTimeout(@pruneUpdateHistory.bind(mainScope), DELAY)
-    # Hack
+    # Trigger dirty hack
     @suppressStatusbarUpdateIcon()
 
 
   suppressStatusbarUpdateIcon: ->
+    @verboseMsg 'looking for `PackageUpdatesStatusView`'
+    # limit the search for `PackageUpdatesStatusView` to TIMEOUT ms
     invokeTime = Date.now()
     TIMEOUT = 2 * 60 * 1000
-    @verboseMsg 'looking for `PackageUpdatesStatusView`'
     @knockingStatusbar = setInterval (->
       toggled = @hidePackageUpdatesStatusView(hide =
                     @userChosen.suppressStatusbarUpdateIcon)
-      if toggled?
+      if toggled?  # die once the `PackageUpdatesStatusView` is touched
         clearInterval(@knockingStatusbar)
         @verboseMsg "`PackageUpdatesStatusView` #{
           if @userChosen.suppressStatusbarUpdateIcon then 'off' else 'on'}"
-      else if Date.now() - invokeTime > TIMEOUT
+      else if Date.now() - invokeTime > TIMEOUT  # die upon TIMEOUT
         clearInterval(@knockingStatusbar)
         @verboseMsg "`PackageUpdatesStatusView` not found"
       ).bind(mainScope), 1000
@@ -204,7 +210,7 @@ module.exports =
       @verboseMsg 'Overwriting timestamp'
       @setConfig 'lastUpdateTimestamp', Date.now()
       timeToNextCheck = @userChosen.checkInterval
-    # Schedule next check
+    # schedule next check
     @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope),
                                  timeToNextCheck + 1)
     @verboseMsg "Will check for updates again in
@@ -213,26 +219,35 @@ module.exports =
 
 
   pruneUpdateHistory: (keepDays = 30) ->
+    # calculate date of the oldest record allowed
     oldestDateAllowed = new Date()
     oldestDateAllowed.setDate(oldestDateAllowed.getDate() - keepDays)
-
-    updateHistoryObject = JSON.parse(@getConfig 'updateHistory')
+    # prune update history
+    updateHistoryObject = @parseUpdateHistory()
     for entryDate in Object.keys(updateHistoryObject)
       if entryDate < oldestDateAllowed
-        delete updateHistoryObject[entryDate]
-
+        delete updateHistoryObject.entryDate
+    # serialize pruned history
     @setConfig 'updateHistory', JSON.stringify(updateHistoryObject)
+
+
+  parseUpdateHistory: ->
+    try
+      updateHistoryObject = JSON.parse(@getConfig 'updateHistory')
+    catch error
+      updateHistoryObject = {}
+    return updateHistoryObject
 
 
   getConfig: (configName) ->
     if configName?
-      atom.config.get("autoupdate-packages.#{configName}")
+      atom.config.get "autoupdate-packages.#{configName}"
     else
-      atom.config.get('autoupdate-packages')
+      atom.config.get 'autoupdate-packages'
 
 
   setConfig: (configName, value) ->
-    atom.config.set("autoupdate-packages.#{configName}", value)
+    atom.config.set "autoupdate-packages.#{configName}", value
 
 
   verboseMsg: (msg, forced = debugMode) ->

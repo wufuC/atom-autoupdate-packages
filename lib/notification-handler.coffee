@@ -3,6 +3,22 @@ updateHandler = null
 
 
 module.exports =
+
+  announceUpdates: (pendingUpdates, saySomething, actionRequired) ->
+    # generate a message object
+    message =
+      @generateNotificationMsg pendingUpdates, saySomething, actionRequired
+    # populate content of notification bubble
+    bubbleHeading = message.title
+    bubbleOptions = {'detail': message.content, 'dismissable': actionRequired}
+    # post notification bubble
+    updateNotification = atom.notifications.addInfo bubbleHeading, bubbleOptions
+    # trigger confirmation dialog if required
+    if actionRequired
+      confirmMsg = @generateConfirmMsg(pendingUpdates)
+      updateNotification.onDidDismiss -> atom.confirm(confirmMsg)
+
+
   generateNotificationMsg: (pendingUpdates, saySomething, actionRequired) ->
     multipleUpdates = pendingUpdates.length > 1
     titleText = "New version#{if multipleUpdates then 's' else ''} available"
@@ -36,25 +52,16 @@ module.exports =
           updateHandler.startUpdating(pendingUpdates)
         'Not now': ->
           main.verboseMsg 'confirm prompt -> pass'
+    # if multiple updates are available generate an extra button that open
+    #   the `Updates pane` of `settings-view`
     if multipleUpdates
       confimMsgObj.buttons['Let me choose what to update'] = ->
+        main.verboseMsg 'confirm prompt -> opening settings-view'
         atom.commands.dispatch(
           atom.views.getView(atom.workspace),
           'settings-view:check-for-package-updates'
-          )
-        main.verboseMsg 'confirm prompt -> opening settings-view'
+        )
     return confimMsgObj
-
-
-  announceUpdates: (pendingUpdates, saySomething, actionRequired, confirmMsg) ->
-    message =
-      @generateNotificationMsg(pendingUpdates, saySomething, actionRequired)
-    bubbleHeading = message.title
-    bubbleOptions = {'detail': message.content, 'dismissable': actionRequired}
-    updateNotification =
-      atom.notifications.addInfo(bubbleHeading, bubbleOptions)
-    if actionRequired and confirmMsg?
-      updateNotification.onDidDismiss -> atom.confirm(confirmMsg)
 
 
   announceSuccessfulUpdate: (apmInstallMsg) ->

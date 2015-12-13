@@ -6,38 +6,30 @@ UpdateTicket = null
 module.exports =
   getOutdated: ->
     args = ['outdated', '--json', '--no-color']
-    @runCommand args, (outdatedPkgsJSON) =>
-      pendingUpdates = @parseAPMOutputJSON(outdatedPkgsJSON)
-      @processPendingUpdates(pendingUpdates) if pendingUpdates?
+    @runAPM args, (apmOutdatedJSON) =>
+      pendingUpdates = @parseAPMOutdatedJSON(apmOutdatedJSON)
+      if pendingUpdates?.length > 0
+        main.verboseMsg "#{pendingUpdates.length}
+                      update#{if pendingUpdates.length > 1 then 's' else ''}
+                      found"
+        @summonNotifier(pendingUpdates) if main.userChosen.notifyMe
+        @startUpdating(pendingUpdates) if main.userChosen.autoUpdate
+      else
+        main.verboseMsg "No update(s) found"
 
 
-  parseAPMOutputJSON: (apmOutputJSON) ->
+  parseAPMOutdatedJSON: (apmOutdatedJSON) ->
     try
-      availableUpdates = JSON.parse(apmOutputJSON)
+      availableUpdates = JSON.parse(apmOutdatedJSON)
     catch error
-      main.verboseMsg "Error parsing APM output.\n #{apmOutputJSON}"
+      main.verboseMsg "Error parsing APM output.\n #{apmOutdatedJSON}"
       return
     for availableUpdate in availableUpdates
-      # 'name': availableUpdate.name
-      # 'installedVersion': availableUpdate.version
-      # 'latestVersion': availableUpdate.latestVersion
       UpdateTicket ?= require './update-ticket'
       new UpdateTicket availableUpdate
 
 
-  processPendingUpdates: (pendingUpdates) ->
-    if pendingUpdates? and (pendingUpdates.length > 0)
-      main.verboseMsg "#{pendingUpdates.length}
-                    update#{if pendingUpdates.length > 1 then 's' else ''}
-                    found"
-      @summonNotifier(pendingUpdates) if main.userChosen.notifyMe
-      @startUpdating(pendingUpdates) if main.userChosen.autoUpdate
-    else
-      main.verboseMsg "No update(s) found"
-
-
-  # Specify the content of the notification bubble. Called by
-  #   `@processPendingUpdates` if `main.userChosen.notifyMe` is true
+  # specify the content of the notification bubble
   summonNotifier: (pendingUpdates) ->
     main.verboseMsg 'Posting notification'
     notificationHandler ?= require './notification-handler'
@@ -45,8 +37,6 @@ module.exports =
       updatables = pendingUpdates
       saySomething = main.userChosen.autoUpdate or main.userChosen.confirmAction
       actionRequired = main.userChosen.confirmAction
-      confirmMsg = if main.userChosen.confirmAction then notificationHandler.
-        generateConfirmMsg(pendingUpdates) else null
     )
 
 
@@ -55,19 +45,7 @@ module.exports =
       updateTicket.update()
 
 
-  handleAPMOutcome: (apmInstallMsg, updateTicket) ->
-    main.verboseMsg "APM output: #{apmInstallMsg}"
-    if apmInstallMsg.indexOf('✓')
-      updateTicket.addToHistory()
-      if main.userChosen.notifyMe
-        notificationHandler ?= require './notification-handler'
-        notificationHandler.announceSuccessfulUpdate(apmInstallMsg)
-    else
-      notificationHandler ?= require './notification-handler'
-      notificationHandler.announceFailedUpdate(apmInstallMsg)
-
-
-  runCommand: (args, callback, callbackOptions) ->
+  runAPM: (args, callback, callbackOptions) ->
     command = atom.packages.getApmPath()
     outputs = []
     stdout = (output) ->
