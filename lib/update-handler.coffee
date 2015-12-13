@@ -12,18 +12,7 @@ class UpdateTicket
   addToHistory: ->
     updateHistory = JSON.parse(main.getConfig 'updateHistory')
     updateHistory[Date.now()] = this
-    updateHistory = @pruneUpdateHistory(updateHistory)
-    updateHistory = JSON.stringify(updateHistory)
-    atom.config.set 'autoupdate-packages.updateHistory', updateHistory
-
-
-  pruneUpdateHistory: (updateHistoryObject) ->
-    d = new Date()
-    d.setDate(d.getDate() - 30)
-    for entryDate in Object.keys(updateHistoryObject)
-      if entryDate < d
-        delete updateHistoryObject[entryDate]
-    return updateHistoryObject
+    main.setConfig 'updateHistory', JSON.stringify(updateHistory)
 
 
 

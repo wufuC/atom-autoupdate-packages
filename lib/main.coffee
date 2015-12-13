@@ -4,14 +4,14 @@ notificationHandler = null
 
 
 # Debug mode
-# If true, enforce CHECK_DELAY = 0, reset lastUpdateTimestamp and
+# If true, enforce DELAY = 0, reset lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
 debugMode = true
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
 # Default: 30 seconds
-CHECK_DELAY = if debugMode then 0 else 30*1000
+DELAY = if debugMode then 0 else 30*1000
 
 
 # Presets of user-selectable options
@@ -146,10 +146,12 @@ module.exports =
                   suppressStatusbarUpdateIcon =
                     #{@userChosen.suppressStatusbarUpdateIcon},
                   verbose = #{@userChosen.verbose}"
-    # Schedule initial timestamp check. The check is delayed to reduce burden
-    #   on Atom's startup process, which is already slow
-    @verboseMsg "Timestamp inspection will commence in #{CHECK_DELAY/1000} s"
-    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), CHECK_DELAY)
+    # Delay most of the work to reduce burden on Atom's startup process,
+    #   which is already slow
+    @verboseMsg "Timestamp inspection will commence in #{DELAY/1000} s"
+    @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), DELAY)
+    @scheduledHistroyPruning =
+      setTimeout(@pruneUpdateHistory.bind(mainScope), DELAY)
     # Hack
     @suppressStatusbarUpdateIcon()
 
@@ -200,7 +202,7 @@ module.exports =
       updateHandler ?= require './update-handler'
       updateHandler.getOutdated()
       @verboseMsg 'Overwriting timestamp'
-      atom.config.set('autoupdate-packages.lastUpdateTimestamp', Date.now())
+      @setConfig 'lastUpdateTimestamp', Date.now()
       timeToNextCheck = @userChosen.checkInterval
     # Schedule next check
     @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope),
@@ -210,11 +212,27 @@ module.exports =
                   minute#{if timeToNextCheck > 1000*60 then 's' else ''}"
 
 
+  pruneUpdateHistory: (keepDays = 30) ->
+    oldestDateAllowed = new Date()
+    oldestDateAllowed.setDate(oldestDateAllowed.getDate() - keepDays)
+
+    updateHistoryObject = JSON.parse(@getConfig 'updateHistory')
+    for entryDate in Object.keys(updateHistoryObject)
+      if entryDate < oldestDateAllowed
+        delete updateHistoryObject[entryDate]
+
+    @setConfig 'updateHistory', JSON.stringify(updateHistoryObject)
+
+
   getConfig: (configName) ->
     if configName?
       atom.config.get("autoupdate-packages.#{configName}")
     else
       atom.config.get('autoupdate-packages')
+
+
+  setConfig: (configName, value) ->
+    atom.config.set("autoupdate-packages.#{configName}", value)
 
 
   verboseMsg: (msg, forced = debugMode) ->
