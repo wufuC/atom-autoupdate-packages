@@ -6,7 +6,7 @@ notificationHandler = null
 # Debug mode
 # If true, enforce CHECK_DELAY = 0, reset lastUpdateTimestamp and
 #   trigger @checkTimestamp when window is (re-)drawn
-debugMode = false
+debugMode = true
 
 
 # Postpone update checking after a new window is drawn (in millisecond)
@@ -100,6 +100,11 @@ module.exports =
       default: 0
       minimum: 0
       order: 9
+    updateHistory:
+      title: 'Update history'
+      description: 'For internal use. Do *NOT* modify.'
+      type: 'string'
+      default: '{}'
 
 
   # `CachedUserPreferences` instance; exported for the handlers
@@ -113,7 +118,7 @@ module.exports =
       atom.config.onDidChange 'autoupdate-packages', ((contrastedValues) ->
         for item, oldSetting of contrastedValues.oldValue
           newSetting = contrastedValues.newValue[item]
-          if item isnt 'lastUpdateTimestamp' and oldSetting isnt newSetting
+          if (item not in ['lastUpdateTimestamp', 'updateHistory']) and (oldSetting isnt newSetting)
             @init(contrastedValues.newValue)
             break
       ).bind(mainScope)

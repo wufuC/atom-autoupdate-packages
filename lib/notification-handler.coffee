@@ -17,8 +17,8 @@ module.exports =
     else
       contentText = ''
     for updatable in listOfUpdates
-      contentText += "  #{updatable.name} #{updatable.installedVersion} ->
-                      #{updatable.latestVersion}\n"
+      contentText += "  #{updatable.packageName} #{updatable.fromVersion} ->
+                      #{updatable.toVersion}\n"
     messageObj =
       title: titleText
       content: contentText
@@ -57,24 +57,19 @@ module.exports =
       updateNotification.onDidDismiss -> atom.confirm(confirmMsg)
 
 
-  announceUpgradeOutcome: (apmInstallMsg) ->
+  announceUpgradeOutcome: (apmInstallMsg, updateTicket) ->
     if apmInstallMsg.indexOf('✓')
       if main.userChosen.notifyMe
         atom.notifications.addSuccess(
           "Package has been updated successfully"
-          {
-            'detail': "APM output:\n#{apmInstallMsg}"
-            dimissable: false
-          }
+          {'detail': "APM output:\n#{apmInstallMsg}", dimissable: false}
         )
+      updateTicket.addToHistory()
     else
       atom.notifications.addWarning(
         "Update failed"
-        {
-          'detail': "APM output:\n#{apmInstallMsg}\n
+        {'detail': "APM output:\n#{apmInstallMsg}\n
           This could be due to network problem. Please submit a bug report if
-          this problem persists."
-          dimissable: true
-        }
+          this problem persists.", dimissable: true}
       )
     main.verboseMsg "APM output: #{apmInstallMsg}"
