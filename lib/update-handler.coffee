@@ -1,19 +1,6 @@
 main = require './main'
 notificationHandler = null
-
-
-class UpdateTicket
-  constructor: (apmJSONRecord) ->
-    @packageName = apmJSONRecord.name
-    @fromVersion = apmJSONRecord.version
-    @toVersion = apmJSONRecord.latestVersion
-
-
-  addToHistory: ->
-    updateHistory = JSON.parse(main.getConfig 'updateHistory')
-    updateHistory[Date.now()] = this
-    main.setConfig 'updateHistory', JSON.stringify(updateHistory)
-
+UpdateTicket = null
 
 
 module.exports =
@@ -34,6 +21,7 @@ module.exports =
       # 'name': availableUpdate.name
       # 'installedVersion': availableUpdate.version
       # 'latestVersion': availableUpdate.latestVersion
+      UpdateTicket ?= require './update-ticket'
       new UpdateTicket availableUpdate
 
 
@@ -64,19 +52,19 @@ module.exports =
 
   startUpdating: (pendingUpdates) ->
     for updateTicket in pendingUpdates
-      args = ['install'
-              '--no-color'
-              "#{updateTicket.packageName}@#{updateTicket.toVersion}"]
-      @runCommand(
-        args=args,
-        callback=@handleAPMOutcome,
-        callbackOptions=updateTicket
-        )
+      updateTicket.update()
 
 
   handleAPMOutcome: (apmInstallMsg, updateTicket) ->
-    notificationHandler ?= require './notification-handler'
-    notificationHandler.announceUpgradeOutcome(apmInstallMsg, updateTicket)
+    main.verboseMsg "APM output: #{apmInstallMsg}"
+    if apmInstallMsg.indexOf('✓')
+      updateTicket.addToHistory()
+      if main.userChosen.notifyMe
+        notificationHandler ?= require './notification-handler'
+        notificationHandler.announceSuccessfulUpdate(apmInstallMsg)
+    else
+      notificationHandler ?= require './notification-handler'
+      notificationHandler.announceFailedUpdate(apmInstallMsg)
 
 
   runCommand: (args, callback, callbackOptions) ->

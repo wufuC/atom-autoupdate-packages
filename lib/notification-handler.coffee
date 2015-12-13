@@ -3,8 +3,8 @@ updateHandler = null
 
 
 module.exports =
-  generateNotificationMsg: (listOfUpdates, saySomething, actionRequired) ->
-    multipleUpdates = listOfUpdates.length > 1
+  generateNotificationMsg: (pendingUpdates, saySomething, actionRequired) ->
+    multipleUpdates = pendingUpdates.length > 1
     titleText = "New version#{if multipleUpdates then 's' else ''} available"
     if saySomething
       contentText = if actionRequired then "
@@ -16,7 +16,7 @@ module.exports =
         '
     else
       contentText = ''
-    for updatable in listOfUpdates
+    for updatable in pendingUpdates
       contentText += "  #{updatable.packageName} #{updatable.fromVersion} ->
                       #{updatable.toVersion}\n"
     messageObj =
@@ -25,15 +25,15 @@ module.exports =
     return messageObj
 
 
-  generateConfirmMsg: (listOfUpdates) ->
-    multipleUpdates = listOfUpdates.length > 1
+  generateConfirmMsg: (pendingUpdates) ->
+    multipleUpdates = pendingUpdates.length > 1
     confimMsgObj =
       message: "Update the package#{if multipleUpdates then 's' else ''} now?"
       buttons:
         'Yes': ->
           main.verboseMsg 'confirm prompt -> proceed'
           updateHandler ?= require './update-handler'
-          updateHandler.processPendingUpdates(listOfUpdates)
+          updateHandler.startUpdating(pendingUpdates)
         'Not now': ->
           main.verboseMsg 'confirm prompt -> pass'
     if multipleUpdates
@@ -46,9 +46,9 @@ module.exports =
     return confimMsgObj
 
 
-  announceUpdates: (listOfUpdates, saySomething, actionRequired, confirmMsg) ->
+  announceUpdates: (pendingUpdates, saySomething, actionRequired, confirmMsg) ->
     message =
-      @generateNotificationMsg(listOfUpdates, saySomething, actionRequired)
+      @generateNotificationMsg(pendingUpdates, saySomething, actionRequired)
     bubbleHeading = message.title
     bubbleOptions = {'detail': message.content, 'dismissable': actionRequired}
     updateNotification =
@@ -57,19 +57,17 @@ module.exports =
       updateNotification.onDidDismiss -> atom.confirm(confirmMsg)
 
 
-  announceUpgradeOutcome: (apmInstallMsg, updateTicket) ->
-    if apmInstallMsg.indexOf('✓')
-      if main.userChosen.notifyMe
-        atom.notifications.addSuccess(
-          "Package has been updated successfully"
-          {'detail': "APM output:\n#{apmInstallMsg}", dimissable: false}
-        )
-      updateTicket.addToHistory()
-    else
-      atom.notifications.addWarning(
-        "Update failed"
-        {'detail': "APM output:\n#{apmInstallMsg}\n
-          This could be due to network problem. Please submit a bug report if
-          this problem persists.", dimissable: true}
-      )
-    main.verboseMsg "APM output: #{apmInstallMsg}"
+  announceSuccessfulUpdate: (apmInstallMsg) ->
+    atom.notifications.addSuccess(
+      "Package has been updated successfully"
+      {'detail': "APM output:\n#{apmInstallMsg}", dimissable: false}
+    )
+
+
+  announceFailedUpdate: (apmInstallMsg) ->
+    atom.notifications.addWarning(
+      "Update failed"
+      {'detail': "APM output:\n#{apmInstallMsg}\n
+        This could be due to network problem. Please submit a bug report if
+        this problem persists.", dimissable: true}
+    )
