@@ -1,3 +1,7 @@
+## 1.4.0-dev
+* Keep a record of updates
+
+
 ## 1.3.1
 * Unhide the 'X updates(s)' icon/button when the package is disabled
 
