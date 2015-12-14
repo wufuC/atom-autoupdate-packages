@@ -63,14 +63,14 @@ class CachedUserPreferences
     @verbose = configObj.verbose is option.verboseModes.enabled
     @blacklistedPackages = configObj.blacklistedPackages
     @keepUpdateHistory =
-      configObj.keepUpdateHistory is option.keepUpdateHistory.enabled
+      configObj.keepUpdateHistory is option.keepUpdateHistoryModes.enabled
 
 
 module.exports =
   config:
     frequency:
       title: 'Check frequency'
-      description: "Check for update every ___ hour(s)\nMinimum: 1 hour"
+      description: "Check for update every ___ hour(s). Minimum: 1 hour."
       type: 'integer'
       default: 6
       minimum: 1
@@ -82,6 +82,15 @@ module.exports =
       enum: (mode.key for modeID, mode of option.preset)
       default: option.preset.mode0.key
       order: 2
+    blacklistedPackages:
+      title: 'Ignored package(s)'
+      description: 'A list of packages (seperated by commas) that will *not* be
+                    updated by `autoupdate-packages`.'
+      type: 'array'
+      default: []
+      items:
+        type: 'string'
+      order: 3
     suppressStatusbarUpdateIcon:
       title: 'Suppress status bar icon/button'
       description: 'If enabled, automatically dismiss the blue "X update(s)"
@@ -91,17 +100,11 @@ module.exports =
         for mode, description of option.suppressStatusbarUpdateIcon
           description
       default: option.suppressStatusbarUpdateIcon.enabled
-      order: 3
-    blacklistedPackages:
-      title: 'Blacklised package(s)'
-      description: ''
-      type: 'array'
-      default: []
       order: 4
     keepUpdateHistory:
       title: 'History keeping'
       description:
-        'Keep a history of udpates installed by `autoupdate-packages`'
+        'Keep a history of updates installed by this package.'
       type: 'string'
       enum:
         for mode, description of option.keepUpdateHistoryModes
@@ -109,21 +112,21 @@ module.exports =
       default: option.keepUpdateHistoryModes.disabled
       order: 5
     verbose:
-      title: 'Verbose log'
+      title: 'Verbose'
       description: 'If enabled, log action to console.'
       type: 'string'
       enum: (description for mode, description of option.verboseModes)
       default: option.verboseModes.disabled
       order: 9
     updateHistory:
-      title: 'Recent updates (in the last 30 days)'
+      title: '<Internal> Recent updates (in the last 30 days)'
       description: 'A record (in JSON format) of recent updates installed by
-                    `autoupdate-packages`.\nDo *NOT* modify.'
+                    `autoupdate-packages`. Do *NOT* modify.'
       type: 'string'
       default: '{}'
       order: 98
     lastUpdateTimestamp:
-      title: 'Lastupdate timestamp'
+      title: '<Internal> Lastupdate timestamp'
       description: 'For internal use. Do *NOT* modify.'
       type: 'integer'
       default: 0
@@ -142,7 +145,9 @@ module.exports =
       atom.config.onDidChange 'autoupdate-packages', ((contrastedValues) ->
         for item, oldSetting of contrastedValues.oldValue
           newSetting = contrastedValues.newValue[item]
-          if (item not in ['lastUpdateTimestamp', 'updateHistory']) and
+          if (item not in ['blacklistedPackages'
+                           'lastUpdateTimestamp'
+                           'updateHistory']) and
               (oldSetting isnt newSetting)
             @init(contrastedValues.newValue)
             break

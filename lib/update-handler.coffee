@@ -42,7 +42,12 @@ module.exports =
 
   startUpdating: (pendingUpdates) ->
     for updateTicket in pendingUpdates
-      updateTicket.update()
+      if updateTicket.packageName not in main.userChosen.blacklistedPackages
+        updateTicket.update()
+      else
+        main.verboseMsg "Ignoring
+          #{updateTicket.packageName}@#{updateTicket.toVersion}.
+          Reason: This package is blacklisted. See `Settings`."
 
 
   runAPM: (args, callback, callbackOptions) ->

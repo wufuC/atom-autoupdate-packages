@@ -47,7 +47,7 @@ class UpdateTicket
   parseUpdateOutcome: (apmInstallMsg, updateTicket) ->
     main.verboseMsg "APM output: #{apmInstallMsg}"
     if apmInstallMsg.indexOf('✓')
-      updateTicket.addToHistory()
+      updateTicket.addToHistory() if main.userChosen.keepUpdateHistory
       if main.userChosen.notifyMe
         notificationHandler ?= require './notification-handler'
         notificationHandler.announceSuccessfulUpdate(apmInstallMsg)
