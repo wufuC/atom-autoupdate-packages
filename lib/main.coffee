@@ -35,6 +35,9 @@ option =
   verboseModes:
     disabled: 'Disabled (default)'
     enabled: 'Enabled'
+  keepUpdateHistoryModes:
+    disabled: 'Disabled (default)'
+    enabled: 'Enabled'
 
 
 class CachedUserPreferences
@@ -58,6 +61,9 @@ class CachedUserPreferences
       (configObj.suppressStatusbarUpdateIcon is
         option.suppressStatusbarUpdateIcon.enabled)
     @verbose = configObj.verbose is option.verboseModes.enabled
+    @blacklistedPackages = configObj.blacklistedPackages
+    @keepUpdateHistory =
+      configObj.keepUpdateHistory is option.keepUpdateHistory.enabled
 
 
 module.exports =
@@ -86,27 +92,43 @@ module.exports =
           description
       default: option.suppressStatusbarUpdateIcon.enabled
       order: 3
+    blacklistedPackages:
+      title: 'Blacklised package(s)'
+      description: ''
+      type: 'array'
+      default: []
+      order: 4
+    keepUpdateHistory:
+      title: 'History keeping'
+      description:
+        'Keep a history of udpates installed by `autoupdate-packages`'
+      type: 'string'
+      enum:
+        for mode, description of option.keepUpdateHistoryModes
+          description
+      default: option.keepUpdateHistoryModes.disabled
+      order: 5
     verbose:
       title: 'Verbose log'
       description: 'If enabled, log action to console.'
       type: 'string'
       enum: (description for mode, description of option.verboseModes)
       default: option.verboseModes.disabled
-      order: 4
+      order: 9
     updateHistory:
-      title: 'Update history'
-      description: 'A record of recent updates (in JSON format).\n
-                    Do *NOT* modify.'
+      title: 'Recent updates (in the last 30 days)'
+      description: 'A record (in JSON format) of recent updates installed by
+                    `autoupdate-packages`.\nDo *NOT* modify.'
       type: 'string'
       default: '{}'
-      order: 8
+      order: 98
     lastUpdateTimestamp:
       title: 'Lastupdate timestamp'
       description: 'For internal use. Do *NOT* modify.'
       type: 'integer'
       default: 0
       minimum: 0
-      order: 9
+      order: 99
 
 
   # `CachedUserPreferences` instance; exported for the handlers
@@ -157,7 +179,7 @@ module.exports =
     @scheduledCheck = setTimeout(@checkTimestamp.bind(mainScope), DELAY)
     @scheduledHistroyPruning =
       setTimeout(@pruneUpdateHistory.bind(mainScope), DELAY)
-    # Trigger dirty hack
+    # Trigger dirty hack that hides `PackageUpdatesStatusView`
     @suppressStatusbarUpdateIcon()
 
 
