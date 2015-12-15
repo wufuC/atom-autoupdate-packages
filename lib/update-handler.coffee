@@ -21,12 +21,15 @@ module.exports =
   parseAPMOutdatedJSON: (apmOutdatedJSON) ->
     try
       availableUpdates = JSON.parse(apmOutdatedJSON)
+      for availableUpdate in availableUpdates
+        if availableUpdate.name in main.userChosen.blacklistedPackages
+          main.verboseMsg "Newer version of `#{availableUpdate.name}` has been
+                            found but ignored. See `Settings`."
+        else
+          UpdateTicket ?= require './update-ticket'
+          return new UpdateTicket availableUpdate
     catch error
       main.verboseMsg "Error parsing APM output.\n #{apmOutdatedJSON}"
-      return
-    for availableUpdate in availableUpdates
-      UpdateTicket ?= require './update-ticket'
-      new UpdateTicket availableUpdate
 
 
   # specify the content of the notification bubble
@@ -42,14 +45,7 @@ module.exports =
 
   startUpdating: (pendingUpdates) ->
     for updateTicket in pendingUpdates
-      if updateTicket.packageName not in main.userChosen.blacklistedPackages
-        updateTicket.update()
-      else
-        main.verboseMsg "An update for
-                          #{updateTicket.packageName} has been found
-                          (#{updateTicket.fromVersion} ->
-                          #{updateTicket.toVersion}) but ignored.
-                          See `Settings`."
+      updateTicket.update()
 
 
   runAPM: (args, callback, callbackOptions) ->
