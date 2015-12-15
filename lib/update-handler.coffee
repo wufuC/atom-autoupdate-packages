@@ -45,9 +45,11 @@ module.exports =
       if updateTicket.packageName not in main.userChosen.blacklistedPackages
         updateTicket.update()
       else
-        main.verboseMsg "Ignoring
-          #{updateTicket.packageName}@#{updateTicket.toVersion}.
-          Reason: This package is blacklisted. See `Settings`."
+        main.verboseMsg "An update for
+                          #{updateTicket.packageName} has been found
+                          (#{updateTicket.fromVersion} ->
+                          #{updateTicket.toVersion}) but ignored.
+                          See `Settings`."
 
 
   runAPM: (args, callback, callbackOptions) ->
